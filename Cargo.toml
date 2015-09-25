@@ -3,5 +3,5 @@ name = "chord3"
 version = "0.1.0"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 
-[dependencies]
-pdf = "*"
+[dependencies.pdf]
+git = "https://github.com/kaj/rust-pdf.git"
