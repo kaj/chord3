@@ -6,13 +6,12 @@ use std::io;
 use std::vec::Vec;
 //use std::io::Write;
 
-fn chordbox<'a>(c: &mut Canvas<'a, File>, name: &str, strings: Vec<i8>)
+fn chordbox<'a>(c: &mut Canvas<'a, File>, left: f32, top: f32,
+                name: &str, strings: Vec<i8>)
                 -> io::Result<()> {
     let dx = 5.0;
     let dy = 7.0;
-    let left = 15.0;
     let right = left + 5.0 * dx;
-    let top = 100.0;
     let bottom = top - 4.4 * dy;
     try!(c.text(|t| {
         try!(t.set_font(12.0));
@@ -22,6 +21,7 @@ fn chordbox<'a>(c: &mut Canvas<'a, File>, name: &str, strings: Vec<i8>)
     let barre = strings[0];
     let up =
         if barre < 2 {
+            try!(c.set_line_width(1.0));
             try!(c.move_to(left-0.15, top+0.5));
             try!(c.line_to(right+0.15, top+0.5));
             try!(c.stroke());
@@ -77,17 +77,12 @@ fn chordbox<'a>(c: &mut Canvas<'a, File>, name: &str, strings: Vec<i8>)
 fn main() {
     let mut file = File::create("foo.pdf").unwrap();
     let mut document = Pdf::new(&mut file).unwrap();
-    document.render_page(120.0, 150.0, |c| {
-        chordbox(c, "Am", vec!(0, -1, 0, 2, 2, 1, 0))
-    }).unwrap();
-    document.render_page(120.0, 150.0, |c| {
-        chordbox(c, "G", vec!(0, 3, 2, 0, 0, 0, 3))
-    }).unwrap();
-    document.render_page(120.0, 150.0, |c| {
-        chordbox(c, "D", vec!(0, -1, -1, 0, 2, 3, 2))
-    }).unwrap();
-    document.render_page(120.0, 150.0, |c| {
-        chordbox(c, "Bm7", vec!(2, -1, 1, 3, 1, 2, 1))
+    document.render_page(200.0, 150.0, |c| {
+        try!(chordbox(c,  20.0, 100.0, "Am", vec!(0, -1, 0, 2, 2, 1, 0)));
+        try!(chordbox(c,  60.0, 100.0, "G", vec!(0, 3, 2, 0, 0, 0, 3)));
+        try!(chordbox(c, 100.0, 100.0, "D", vec!(0, -1, -1, 0, 2, 3, 2)));
+        try!(chordbox(c, 140.0, 100.0, "Bm7", vec!(2, -1, 1, 3, 1, 2, 1)));
+        Ok(())
     }).unwrap();
     document.finish().unwrap();
 }
