@@ -1,6 +1,6 @@
 extern crate pdf;
 
-use pdf::{Canvas, Pdf};
+use pdf::{Canvas, Pdf, FontSource};
 use std::fs::File;
 use std::io;
 use std::vec::Vec;
@@ -13,8 +13,9 @@ fn chordbox<'a>(c: &mut Canvas<'a, File>, left: f32, top: f32,
     let dy = 7.0;
     let right = left + 5.0 * dx;
     let bottom = top - 4.4 * dy;
+    let times = c.get_font(FontSource::Times_Roman);
     try!(c.text(|t| {
-        try!(t.set_font(12.0));
+        try!(t.set_font(times, 12.0));
         try!(t.pos(left, top+dy));
         t.show(name)
     }));
@@ -27,12 +28,13 @@ fn chordbox<'a>(c: &mut Canvas<'a, File>, left: f32, top: f32,
             try!(c.stroke());
             0.0
         } else {
+            let font = c.get_font(FontSource::Helvetica);
             try!(c.text(|t| {
-                try!(t.set_font(dy));
+                try!(t.set_font(font, dy));
                 try!(t.pos(left - dx, top - 0.9 * dy));
                 t.show(&format!("{}", barre))
             }));
-            1.5
+            1.6
         };
     try!(c.set_line_width(0.3));
     for b in 0..5 {
