@@ -201,19 +201,34 @@ fn main() {
                     t.show(&s)
                 }),
                 ChordFileExpression::Line{s} => c.text(|t| {
-                    y = y - 30.0;
-                    try!(t.set_font(times, 16.0));
+                    let text_size = 14.0;
+                    let chord_size = 10.0;
+                    y = y - 1.4 * (text_size + chord_size);
+                    try!(t.set_font(times, text_size));
                     try!(t.pos(left, y));
+                    let (mut last_chord, mut last_text) = (-600, 0);
                     for (i, part) in s.iter().enumerate() {
                         if i % 2 == 1 {
                             used_chords.insert(part.to_string());
                             try!(t.gsave());
                             try!(t.set_rise(14.0));
-                            try!(t.set_font(chordfont, 14.0));
-                            try!(t.show(&part));
+                            try!(t.set_font(chordfont, chord_size));
+                            let ahead = last_text - last_chord - 278;
+                            // TODO One show_j should be enough, but sometimes
+                            // with two args and sometimes with three!
+                            if ahead < 0 {
+                                try!(t.show_j("", ahead));
+                            }
+                            last_chord = FontSource::Helvetica_Oblique
+                                .get_width_raw(&part) as i32;
+                            try!(t.show_j(&part, last_chord));
                             try!(t.grestore());
                         } else {
                             try!(t.show(&part));
+                            last_text =
+                                (FontSource::Times_Roman
+                                 .get_width_raw(&part) as f32
+                                 * text_size / chord_size) as i32;
                         }
                     }
                     Ok(())
