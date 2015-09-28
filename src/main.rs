@@ -235,6 +235,9 @@ fn main() {
                 })
             })
         }
+        // Remove non-chords that are displayed like chords above the text.
+        used_chords.remove("%");
+        used_chords.remove("");
         let mut x = width - used_chords.len() as f32 * 40.0;
         for chord in used_chords.iter() {
             if let Some(chorddef) = known_chords.get(chord) {
