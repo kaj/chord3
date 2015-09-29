@@ -130,13 +130,14 @@ enum ChordFileExpression {
     Title{s: String},
     SubTitle{s: String},
     Comment{s: String},
+    ChordDef{name: String, def: Vec<i8>},
     Line{s: Vec<String>}
 }
 
 impl ChordFileExpression {
     fn parse(line: &str) -> ChordFileExpression {
         let comment_re = Regex::new(r"^\s*#").unwrap();
-        let re = Regex::new(r"\{(?P<cmd>\w+)(?::\s*(?P<arg>.*))?}").unwrap();
+        let re = Regex::new(r"\{(?P<cmd>\w+)(?::?\s*(?P<arg>.*))?}").unwrap();
         if comment_re.is_match(line) {
             ChordFileExpression::Comment{s: "".to_string()}
         } else if let Some(caps) = re.captures(line) {
@@ -145,6 +146,30 @@ impl ChordFileExpression {
                 "t" | "title" => ChordFileExpression::Title{s: arg},
                 "st" | "subtitle" => ChordFileExpression::SubTitle{s:arg},
                 "c" => ChordFileExpression::Comment{s:arg},
+                "define" => {
+                    //println!("Parse chord def '{}'", arg);
+                    let re = Regex::new(r"^([\S]+)\s+base-fret\s+([x0-5])\s+frets(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))\s*$").unwrap();
+                    if let Some(caps) = re.captures(&arg) {
+                        let s = |n| {
+                            //println!("String {} is {:?}", n,
+                            //         caps.at(n as usize+2));
+                            match caps.at(n as usize+2) {
+                                Some("x") | None => -1,
+                                Some(s) => s.parse::<i8>().unwrap(),
+                            }
+                        };
+                        ChordFileExpression::ChordDef {
+                            name: caps.at(1).unwrap().to_string(),
+                            def: vec!(s(0),
+                                      s(1), s(2), s(3),
+                                      s(4), s(5), s(6))
+                        }
+                    } else {
+                        let whole = caps.at(0).unwrap();
+                        println!("Warning: Bad chord definition {}", whole);
+                        ChordFileExpression::Comment{s:whole.to_string()}
+                    }
+                },
                 x => {
                     println!("unknown expression {}", x);
                     ChordFileExpression::Comment{s:caps.at(0).unwrap().to_string()}
@@ -171,6 +196,7 @@ fn main() {
     let mut document = Pdf::new(&mut file).unwrap();
     let (width, height) = (596.0, 842.0);
     let known_chords = get_known_chords();
+    let mut local_chords : BTreeMap<String, Vec<i8>> = BTreeMap::new();
     document.render_page(width, height, |c| {
         let mut y = height - 30.0;
         let left = 50.0;
@@ -200,6 +226,10 @@ fn main() {
                     try!(t.pos(left, y));
                     t.show(&s)
                 }),
+                ChordFileExpression::ChordDef{name, def} => {
+                    local_chords.insert(name, def);
+                    Ok(())
+                },
                 ChordFileExpression::Line{s} => c.text(|t| {
                     let text_size = 14.0;
                     let chord_size = 10.0;
@@ -240,7 +270,9 @@ fn main() {
         used_chords.remove("");
         let mut x = width - used_chords.len() as f32 * 40.0;
         for chord in used_chords.iter() {
-            if let Some(chorddef) = known_chords.get(chord) {
+            if let Some(chorddef) = local_chords.get(chord) {
+                try!(chordbox(c, x, 80.0, chord, chorddef));
+            } else if let Some(chorddef) = known_chords.get(chord) {
                 try!(chordbox(c, x, 80.0, chord, chorddef));
             } else {
                 println!("Warning: Unknown chord '{}'.", chord);
