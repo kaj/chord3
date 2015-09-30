@@ -210,19 +210,19 @@ fn main() {
             try!(match token {
                 ChordFileExpression::Title{s} => c.text(|t| {
                     y = y - 20.0;
-                    try!(t.set_font(times_bold, 18.0));
+                    try!(t.set_font(&times_bold, 18.0));
                     try!(t.pos(left, y));
                     t.show(&s)
                 }),
                 ChordFileExpression::SubTitle{s} => c.text(|t| {
                     y = y - 18.0;
-                    try!(t.set_font(times_italic, 16.0));
+                    try!(t.set_font(&times_italic, 16.0));
                     try!(t.pos(left, y));
                     t.show(&s)
                 }),
                 ChordFileExpression::Comment{s} => c.text(|t| {
                     y = y - 14.0;
-                    try!(t.set_font(times_italic, 14.0));
+                    try!(t.set_font(&times_italic, 14.0));
                     try!(t.pos(left, y));
                     t.show(&s)
                 }),
@@ -234,7 +234,7 @@ fn main() {
                     let text_size = 14.0;
                     let chord_size = 10.0;
                     y = y - 1.2 * (text_size + chord_size);
-                    try!(t.set_font(times, text_size));
+                    try!(t.set_font(&times, text_size));
                     try!(t.pos(left, y));
                     let mut last_chord_width = 0.0;
                     for (i, part) in s.iter().enumerate() {
@@ -242,17 +242,16 @@ fn main() {
                             used_chords.insert(part.to_string());
                             try!(t.gsave());
                             try!(t.set_rise(text_size));
-                            try!(t.set_font(chordfont, chord_size));
-                            let chord_width = FontSource::Helvetica_Oblique
-                                .get_width_raw(&part) as i32;
+                            try!(t.set_font(&chordfont, chord_size));
+                            let chord_width =
+                                chordfont.get_width_raw(&part) as i32;
                             try!(t.show_j(&part, chord_width));
                             last_chord_width =
                                 (chord_width + 400) as f32 * chord_size / 1000.0;
                             try!(t.grestore());
                         } else {
-                            let text_width = FontSource::Times_Roman
-                                .get_width(text_size, &part);
-                            if last_chord_width > text_width {
+                            let text_width = times.get_width(text_size, &part);
+                            if last_chord_width > text_width && i+1 < s.len() {
                                 let extra = last_chord_width - text_width;
                                 let n_space = part.chars()
                                     .filter(|&c| {c == ' '})
