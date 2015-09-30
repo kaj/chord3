@@ -9,6 +9,7 @@ use std::io;
 use std::vec::Vec;
 use std::collections::{BTreeSet, BTreeMap};
 use std::env;
+use std::sync::Mutex;
 
 fn chordbox<'a>(c: &mut Canvas<'a, File>, left: f32, top: f32,
                 name: &str, strings: &Vec<i8>)
@@ -134,66 +135,125 @@ enum ChordFileExpression {
     Line{s: Vec<String>}
 }
 
-impl ChordFileExpression {
-    fn parse(line: &str) -> ChordFileExpression {
-        let comment_re = Regex::new(r"^\s*#").unwrap();
-        let re = Regex::new(r"\{(?P<cmd>\w+)(?::?\s*(?P<arg>.*))?}").unwrap();
-        if comment_re.is_match(line) {
-            ChordFileExpression::Comment{s: "".to_string()}
-        } else if let Some(caps) = re.captures(line) {
-            let arg = caps.name("arg").unwrap_or("").to_string();
-            match caps.name("cmd").unwrap() {
-                "t" | "title" => ChordFileExpression::Title{s: arg},
-                "st" | "subtitle" => ChordFileExpression::SubTitle{s:arg},
-                "c" => ChordFileExpression::Comment{s:arg},
-                "define" => {
-                    //println!("Parse chord def '{}'", arg);
-                    let re = Regex::new(r"^([\S]+)\s+base-fret\s+([x0-5])\s+frets(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))\s*$").unwrap();
-                    if let Some(caps) = re.captures(&arg) {
-                        let s = |n| {
-                            //println!("String {} is {:?}", n,
-                            //         caps.at(n as usize+2));
-                            match caps.at(n as usize+2) {
-                                Some("x") | None => -1,
-                                Some(s) => s.parse::<i8>().unwrap(),
-                            }
-                        };
-                        ChordFileExpression::ChordDef {
-                            name: caps.at(1).unwrap().to_string(),
-                            def: vec!(s(0),
-                                      s(1), s(2), s(3),
-                                      s(4), s(5), s(6))
-                        }
-                    } else {
-                        let whole = caps.at(0).unwrap();
-                        println!("Warning: Bad chord definition {}", whole);
-                        ChordFileExpression::Comment{s:whole.to_string()}
+struct ChoproParser<R: io::Read> {
+    source: Mutex<io::Lines<io::BufReader<R>>>
+}
+
+impl ChoproParser<File> {
+    fn open(path: &str) -> io::Result<ChoproParser<File>> {
+        let f = try!(File::open(path));
+        Ok(ChoproParser::new(f))
+    }
+}
+impl<R: io::Read> ChoproParser<R> {
+    fn new(source: R) -> ChoproParser<R> {
+        let reader = io::BufReader::new(source);
+        ChoproParser {
+            source: Mutex::new(reader.lines())
+        }
+    }
+
+    // Internal: Return the next line that is not a comment
+    fn nextline(&mut self) -> Option<String> {
+        loop {
+            match self.source.lock().unwrap().next() {
+                Some(Ok(line)) => {
+                    let comment_re = Regex::new(r"^\s*#").unwrap();
+                    if !comment_re.is_match(&line) {
+                        return Some(line)
                     }
                 },
-                x => {
-                    println!("unknown expression {}", x);
-                    ChordFileExpression::Comment{s:caps.at(0).unwrap().to_string()}
+                Some(Err(e)) => {
+                    println!("Failed to read source: {}", e);
+                    return None
+                },
+                _ => {
+                    return None
                 }
             }
-        } else {
-            let mut s = vec!();
-            let re = Regex::new(r"([^\[]*)(?:\[([^\]]*)\])?").unwrap();
-            for caps in re.captures_iter(line) {
-                s.push(caps.at(1).unwrap().to_string());
-                if let Some(chord) = caps.at(2) {
-                    s.push(chord.to_string());
-                }
-            }
-            ChordFileExpression::Line{s: s}
         }
     }
 }
 
+impl<R: io::Read> Iterator for ChoproParser<R> {
+    type Item = ChordFileExpression;
+
+    fn next(&mut self) -> Option<ChordFileExpression> {
+        if let Some(line) = self.nextline() {
+            let re = Regex::new(r"\{(?P<cmd>\w+)(?::?\s*(?P<arg>.*))?\}").unwrap();
+            if let Some(caps) = re.captures(&line) {
+                let arg = caps.name("arg").unwrap_or("").to_string();
+                match caps.name("cmd").unwrap() {
+                    "t" | "title" => Some(ChordFileExpression::Title{s: arg}),
+                    "st" | "subtitle" => Some(ChordFileExpression::SubTitle{s:arg}),
+                    "c" => Some(ChordFileExpression::Comment{s:arg}),
+                    "define" => {
+                        //println!("Parse chord def '{}'", arg);
+                        let re = Regex::new(r"^([\S]+)\s+base-fret\s+([x0-5])\s+frets(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))\s*$").unwrap();
+                        if let Some(caps) = re.captures(&arg) {
+                            let s = |n| {
+                                //println!("String {} is {:?}", n,
+                                //         caps.at(n as usize+2));
+                                match caps.at(n as usize+2) {
+                                    Some("x") | None => -1,
+                                    Some(s) => s.parse::<i8>().unwrap(),
+                                }
+                            };
+                            Some(ChordFileExpression::ChordDef {
+                                name: caps.at(1).unwrap().to_string(),
+                                def: vec!(s(0),
+                                          s(1), s(2), s(3),
+                                          s(4), s(5), s(6))
+                            })
+                        } else {
+                            let whole = caps.at(0).unwrap();
+                            println!("Warning: Bad chord definition {}", whole);
+                            Some(ChordFileExpression::Comment{s:whole.to_string()})
+                        }
+                    },
+                    x => {
+                        println!("unknown expression {}", x);
+                        Some(ChordFileExpression::Comment{s:caps.at(0).unwrap().to_string()})
+                    }
+                }
+            } else {
+                let mut s = vec!();
+                let re = Regex::new(r"([^\[]*)(?:\[([^\]]*)\])?").unwrap();
+                for caps in re.captures_iter(&line) {
+                    s.push(caps.at(1).unwrap().to_string());
+                    if let Some(chord) = caps.at(2) {
+                        s.push(chord.to_string());
+                    }
+                }
+                Some(ChordFileExpression::Line{s: s})
+            }
+        } else {
+            None
+        }
+    }
+}
+
+
 fn main() {
     let mut file = File::create("foo.pdf").unwrap();
-    let source = io::BufReader::new(File::open(env::args().nth(1).unwrap_or("../chord/c/creedence/DownOnTheCorner.chopro".to_string()))
-        .unwrap());
     let mut document = Pdf::new(&mut file).unwrap();
+    let args = env::args();
+    let args = args.skip(1);
+    if args.len() > 0 {
+        for name in args {
+            if let Err(e) = render_song(&mut document, name.clone()) {
+                println!("Failed to handle {}: {}", name, e);
+            }
+        }
+    } else {
+        println!("Usage: {} [chordfile]...", env::args().nth(0).unwrap());
+    }
+    document.finish().unwrap();
+}
+
+fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
+                   -> io::Result<()> {
+    let source = try!(ChoproParser::open(&songfilename));
     let (width, height) = (596.0, 842.0);
     let known_chords = get_known_chords();
     let mut local_chords : BTreeMap<String, Vec<i8>> = BTreeMap::new();
@@ -205,8 +265,8 @@ fn main() {
         let times = c.get_font(FontSource::Times_Roman);
         let chordfont = c.get_font(FontSource::Helvetica_Oblique);
         let mut used_chords : BTreeSet<String> = BTreeSet::new();
-        for line in source.lines() {
-            let token = ChordFileExpression::parse(&line.unwrap());
+        for token in source {
+            //let token = ChordFileExpression::parse(&line.unwrap()).unwrap();
             try!(match token {
                 ChordFileExpression::Title{s} => c.text(|t| {
                     y = y - 20.0;
@@ -250,6 +310,8 @@ fn main() {
                                 (chord_width + 400) as f32 * chord_size / 1000.0;
                             try!(t.grestore());
                         } else {
+                            let part = { if part.len() > 0 { part.to_string() }
+                                         else { " ".to_string() } };
                             let text_width = times.get_width(text_size, &part);
                             if last_chord_width > text_width && i+1 < s.len() {
                                 let extra = last_chord_width - text_width;
@@ -291,6 +353,5 @@ fn main() {
             x = x + 40.0;
         }
         Ok(())
-    }).unwrap();
-    document.finish().unwrap();
+    })
 }
