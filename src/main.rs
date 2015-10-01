@@ -238,7 +238,8 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
                 ChordFileExpression::Line{s} => c.text(|t| {
                     let text_size = 14.0;
                     let chord_size = 10.0;
-                    y = y - 1.2 * (text_size + chord_size);
+                    y = y - 1.2 * ( if s.len() > 1 {text_size + chord_size}
+                                    else { text_size } );
                     try!(t.set_font(&times, text_size));
                     try!(t.pos(left, y));
                     let mut last_chord_width = 0.0;
