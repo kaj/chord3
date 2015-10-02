@@ -182,6 +182,10 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
 fn main() {
     let mut file = File::create("foo.pdf").unwrap();
     let mut document = Pdf::new(&mut file).unwrap();
+    document.set_title("Songbook");
+    document.set_producer(concat!("chord3 version ",
+                                  env!("CARGO_PKG_VERSION"),
+                                  "\nhttps://github.com/kaj/chord3"));
     let args = env::args();
     let args = args.skip(1);
     if args.len() > 0 {
