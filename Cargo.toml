@@ -2,6 +2,8 @@
 name = "chord3"
 version = "0.1.0"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
+repository = "https://github.com/kaj/chord3"
+description = "Create pdf songbooks from chopro source."
 
 [dependencies]
 regex = "*"
