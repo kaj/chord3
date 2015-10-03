@@ -209,83 +209,14 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
     document.render_page(width, height, |c| {
         let mut y = height - 30.0;
         let left = 50.0;
-        let times_bold = c.get_font(FontSource::Times_Bold);
-        let times_italic = c.get_font(FontSource::Times_Italic);
-        let times = c.get_font(FontSource::Times_Roman);
-        let chordfont = c.get_font(FontSource::Helvetica_Oblique);
+        //let times_bold = c.get_font(FontSource::Times_Bold);
+        //let times_italic = c.get_font(FontSource::Times_Italic);
+        //let times = c.get_font(FontSource::Times_Roman);
+        //let chordfont = c.get_font(FontSource::Helvetica_Oblique);
         let mut used_chords : BTreeSet<String> = BTreeSet::new();
         for token in source {
-            //let token = ChordFileExpression::parse(&line.unwrap()).unwrap();
-            try!(match token {
-                ChordFileExpression::Title{s} => c.text(|t| {
-                    y = y - 20.0;
-                    try!(t.set_font(&times_bold, 18.0));
-                    try!(t.pos(left, y));
-                    t.show(&s)
-                }),
-                ChordFileExpression::SubTitle{s} => c.text(|t| {
-                    y = y - 18.0;
-                    try!(t.set_font(&times_italic, 16.0));
-                    try!(t.pos(left, y));
-                    t.show(&s)
-                }),
-                ChordFileExpression::Comment{s} => c.text(|t| {
-                    y = y - 14.0;
-                    try!(t.set_font(&times_italic, 14.0));
-                    try!(t.pos(left, y));
-                    t.show(&s)
-                }),
-                ChordFileExpression::ChordDef{name, def} => {
-                    local_chords.insert(name, def);
-                    Ok(())
-                },
-                ChordFileExpression::Line{s} => c.text(|t| {
-                    let text_size = 14.0;
-                    let chord_size = 10.0;
-                    y = y - 1.2 * ( if s.len() > 1 {text_size + chord_size}
-                                    else { text_size } );
-                    try!(t.set_font(&times, text_size));
-                    try!(t.pos(left, y));
-                    let mut last_chord_width = 0.0;
-                    for (i, part) in s.iter().enumerate() {
-                        if i % 2 == 1 {
-                            used_chords.insert(part.to_string());
-                            try!(t.gsave());
-                            try!(t.set_rise(text_size));
-                            try!(t.set_font(&chordfont, chord_size));
-                            let chord_width =
-                                chordfont.get_width_raw(&part) as i32;
-                            try!(t.show_j(&part, chord_width));
-                            last_chord_width =
-                                (chord_width + 400) as f32 * chord_size / 1000.0;
-                            try!(t.grestore());
-                        } else {
-                            let part = { if part.len() > 0 { part.to_string() }
-                                         else { " ".to_string() } };
-                            let text_width = times.get_width(text_size, &part);
-                            if last_chord_width > text_width && i+1 < s.len() {
-                                let extra = last_chord_width - text_width;
-                                let n_space = part.chars()
-                                    .filter(|&c| {c == ' '})
-                                    .count();
-                                if n_space > 0 {
-                                    try!(t.set_word_spacing(
-                                        extra / n_space as f32));
-                                } else {
-                                    try!(t.set_char_spacing(
-                                        extra / part.len() as f32));
-                                }
-                            }
-                            try!(t.show(&part));
-                            if last_chord_width > text_width {
-                                try!(t.set_char_spacing(0.0));
-                                try!(t.set_word_spacing(0.0));
-                            }
-                        }
-                    }
-                    Ok(())
-                })
-            })
+            y = try!(render_token(token, y, left, c,
+                                  &mut used_chords, &mut local_chords));
         }
         // Remove non-chords that are displayed like chords above the text.
         used_chords.remove("%");
@@ -304,4 +235,86 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
         }
         Ok(())
     })
+}
+
+fn render_token<'a>(token: ChordFileExpression, ypos: f32, left: f32,
+                    c: &mut Canvas<'a, File>,
+                    used_chords : &mut BTreeSet<String>,
+                    local_chords : &mut BTreeMap<String, Vec<i8>>)
+                    -> io::Result<f32> {
+    let mut y = ypos;
+    let times_bold = c.get_font(FontSource::Times_Bold);
+    let times_italic = c.get_font(FontSource::Times_Italic);
+    let times = c.get_font(FontSource::Times_Roman);
+    let chordfont = c.get_font(FontSource::Helvetica_Oblique);
+    match token {
+        ChordFileExpression::Title{s} => c.text(|t| {
+            y = y - 20.0;
+            try!(t.set_font(&times_bold, 18.0));
+            try!(t.pos(left, y));
+            try!(t.show(&s));
+            Ok(y)
+        }),
+        ChordFileExpression::SubTitle{s} => c.text(|t| {
+            y = y - 18.0;
+            try!(t.set_font(&times_italic, 16.0));
+            try!(t.pos(left, y));
+            try!(t.show(&s));
+            Ok(y)
+        }),
+        ChordFileExpression::Comment{s} => c.text(|t| {
+            y = y - 14.0;
+            try!(t.set_font(&times_italic, 14.0));
+            try!(t.pos(left, y));
+            try!(t.show(&s));
+            Ok(y)
+        }),
+        ChordFileExpression::ChordDef{name, def} => {
+            local_chords.insert(name, def);
+            Ok(y)
+        },
+        ChordFileExpression::Line{s} => c.text(|t| {
+            let text_size = 14.0;
+            let chord_size = 10.0;
+            y = y - 1.2 * ( if s.len() > 1 {text_size + chord_size}
+                            else { text_size } );
+            try!(t.set_font(&times, text_size));
+            try!(t.pos(left, y));
+            let mut last_chord_width = 0.0;
+            for (i, part) in s.iter().enumerate() {
+                if i % 2 == 1 {
+                    used_chords.insert(part.to_string());
+                    try!(t.gsave());
+                    try!(t.set_rise(text_size));
+                    try!(t.set_font(&chordfont, chord_size));
+                    let chord_width = chordfont.get_width_raw(&part) as i32;
+                    try!(t.show_j(&part, chord_width));
+                    last_chord_width =
+                        (chord_width + 400) as f32 * chord_size / 1000.0;
+                    try!(t.grestore());
+                } else {
+                    let part = { if part.len() > 0 { part.to_string() }
+                                 else { " ".to_string() } };
+                    let text_width = times.get_width(text_size, &part);
+                    if last_chord_width > text_width && i+1 < s.len() {
+                        let extra = last_chord_width - text_width;
+                        let n_space = part.chars()
+                            .filter(|&c| {c == ' '})
+                            .count();
+                        if n_space > 0 {
+                            try!(t.set_word_spacing(extra / n_space as f32));
+                        } else {
+                            try!(t.set_char_spacing(extra / part.len() as f32));
+                        }
+                    }
+                    try!(t.show(&part));
+                    if last_chord_width > text_width {
+                        try!(t.set_char_spacing(0.0));
+                        try!(t.set_word_spacing(0.0));
+                    }
+                }
+            }
+            Ok(y)
+        })
+    }
 }
