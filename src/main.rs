@@ -131,18 +131,25 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
             if let Some(caps) = re.captures(&line) {
                 let arg = caps.name("arg").unwrap_or("").to_string();
                 match caps.name("cmd").unwrap() {
-                    "t" | "title" => Some(ChordFileExpression::Title{s: arg}),
-                    "st" | "subtitle" => Some(ChordFileExpression::SubTitle{s:arg}),
-                    "c" => Some(ChordFileExpression::Comment{s:arg}),
+                    // TODO This should be a caseless match
+                    // but since I fail to do that, just allow uppercase
+                    // in some more or less random places ...
+                    "t" | "title" | "Title"
+                        => Some(ChordFileExpression::Title{s: arg}),
+                    "st" | "subtitle"
+                        => Some(ChordFileExpression::SubTitle{s:arg}),
+                    "c" | "ci"
+                        => Some(ChordFileExpression::Comment{s:arg}),
                     "define" => {
                         //println!("Parse chord def '{}'", arg);
-                        let re = Regex::new(r"(?i)^([\S]+)\s+base-fret\s+([x0-5])\s+frets(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))\s*$").unwrap();
+                        let re = Regex::new(r"(?i)^([\S]+)\s+base-fret\s+([0-9]+)\s+frets(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))\s*$").unwrap();
                         if let Some(caps) = re.captures(&arg) {
                             let s = |n| {
                                 //println!("String {} is {:?}", n,
                                 //         caps.at(n as usize+2));
                                 match caps.at(n as usize+2) {
-                                    Some("x") | Some("X") | None => -1,
+                                    Some("x") | Some("X") |
+                                    Some("-") | None => -1,
                                     Some(s) => s.parse::<i8>().unwrap(),
                                 }
                             };
@@ -166,7 +173,6 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                                 line => lines.push(line)
                             }
                         }
-                        //self.next().unwrap());
                         Some(ChordFileExpression::Chorus{
                             lines: lines
                         })
@@ -181,7 +187,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
             } else {
                 let mut s = vec!();
                 let re = Regex::new(r"([^\[]*)(?:\[([^\]]*)\])?").unwrap();
-                for caps in re.captures_iter(&line) {
+                for caps in re.captures_iter(&line.replace("\t", "    ")) {
                     s.push(caps.at(1).unwrap().to_string());
                     if let Some(chord) = caps.at(2) {
                         s.push(chord.to_string());
@@ -236,7 +242,10 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
                                   &mut used_chords, &mut local_chords));
         }
         // Remove non-chords that are displayed like chords above the text.
+        used_chords.remove("NC");
+        used_chords.remove("N.C.");
         used_chords.remove("%");
+        used_chords.remove("-");
         used_chords.remove("");
         let mut x = width - used_chords.len() as f32 * 40.0;
         for chord in used_chords.iter() {
