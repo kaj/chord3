@@ -79,6 +79,8 @@ enum ChordFileExpression {
     ChordDef{name: String, def: Vec<i8>},
     Chorus{lines: Vec<ChordFileExpression>},
     EndOfChorus,
+    Tab{lines: Vec<String>},
+    EndOfTab,
     Line{s: Vec<String>}
 }
 
@@ -179,6 +181,23 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                     }
                     "eoc" | "end_of_chorus" =>
                         Some(ChordFileExpression::EndOfChorus),
+                    "sot" | "start_of_tab" => {
+                        let mut lines = vec!();
+                        let end =
+                            Regex::new(r"\{(eot|end_of_tab):?\s*").unwrap();
+                        while let Some(line) = self.nextline() {
+                            if end.is_match(&line) {
+                                break;
+                            } else {
+                                lines.push(line)
+                            }
+                        }
+                        Some(ChordFileExpression::Tab{
+                            lines: lines
+                        })
+                    }
+                    "eot" | "end_of_tab" =>
+                        Some(ChordFileExpression::EndOfTab),
                     x => {
                         println!("unknown expression {}", x);
                         Some(ChordFileExpression::Comment{s:caps.at(0).unwrap().to_string()})
@@ -272,6 +291,7 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
     let times_italic = c.get_font(FontSource::Times_Italic);
     let times = c.get_font(FontSource::Times_Roman);
     let chordfont = c.get_font(FontSource::Helvetica_Oblique);
+    let tabfont = c.get_font(FontSource::Courier);
     match token {
         ChordFileExpression::Title{s} => c.text(|t| {
             let y = y - 20.0;
@@ -311,6 +331,21 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
         }
         ChordFileExpression::EndOfChorus => {
             println!("Warning: Stray end of chorus in song!");
+            Ok(y)
+        }
+        ChordFileExpression::Tab{lines} => c.text(|t| {
+            let mut y = y;
+            try!(t.pos(left, y));
+            try!(t.set_font(&tabfont, 10.0));
+            try!(t.set_leading(10.0));
+            for line in lines {
+                y -= 10.0;
+                try!(t.show_line(&line));
+            }
+            Ok(y)
+        }),
+        ChordFileExpression::EndOfTab => {
+            println!("Warning: Stray end of tab in song!");
             Ok(y)
         }
         ChordFileExpression::Line{s} => c.text(|t| {
