@@ -134,13 +134,13 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                     "c" => Some(ChordFileExpression::Comment{s:arg}),
                     "define" => {
                         //println!("Parse chord def '{}'", arg);
-                        let re = Regex::new(r"^([\S]+)\s+base-fret\s+([x0-5])\s+frets(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))\s*$").unwrap();
+                        let re = Regex::new(r"(?i)^([\S]+)\s+base-fret\s+([x0-5])\s+frets(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))(?:\s+([x0-5]))\s*$").unwrap();
                         if let Some(caps) = re.captures(&arg) {
                             let s = |n| {
                                 //println!("String {} is {:?}", n,
                                 //         caps.at(n as usize+2));
                                 match caps.at(n as usize+2) {
-                                    Some("x") | None => -1,
+                                    Some("x") | Some("X") | None => -1,
                                     Some(s) => s.parse::<i8>().unwrap(),
                                 }
                             };
