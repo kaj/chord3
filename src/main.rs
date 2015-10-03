@@ -77,6 +77,8 @@ enum ChordFileExpression {
     SubTitle{s: String},
     Comment{s: String},
     ChordDef{name: String, def: Vec<i8>},
+    Chorus{lines: Vec<ChordFileExpression>},
+    EndOfChorus,
     Line{s: Vec<String>}
 }
 
@@ -156,6 +158,21 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                             Some(ChordFileExpression::Comment{s:whole.to_string()})
                         }
                     },
+                    "soc" | "start_of_chorus" => {
+                        let mut lines = vec!();
+                        while let Some(line) = self.next() {
+                            match line {
+                                ChordFileExpression::EndOfChorus => { break; },
+                                line => lines.push(line)
+                            }
+                        }
+                        //self.next().unwrap());
+                        Some(ChordFileExpression::Chorus{
+                            lines: lines
+                        })
+                    }
+                    "eoc" | "end_of_chorus" =>
+                        Some(ChordFileExpression::EndOfChorus),
                     x => {
                         println!("unknown expression {}", x);
                         Some(ChordFileExpression::Comment{s:caps.at(0).unwrap().to_string()})
@@ -237,33 +254,32 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
     })
 }
 
-fn render_token<'a>(token: ChordFileExpression, ypos: f32, left: f32,
+fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
                     c: &mut Canvas<'a, File>,
                     used_chords : &mut BTreeSet<String>,
                     local_chords : &mut BTreeMap<String, Vec<i8>>)
                     -> io::Result<f32> {
-    let mut y = ypos;
     let times_bold = c.get_font(FontSource::Times_Bold);
     let times_italic = c.get_font(FontSource::Times_Italic);
     let times = c.get_font(FontSource::Times_Roman);
     let chordfont = c.get_font(FontSource::Helvetica_Oblique);
     match token {
         ChordFileExpression::Title{s} => c.text(|t| {
-            y = y - 20.0;
+            let y = y - 20.0;
             try!(t.set_font(&times_bold, 18.0));
             try!(t.pos(left, y));
             try!(t.show(&s));
             Ok(y)
         }),
         ChordFileExpression::SubTitle{s} => c.text(|t| {
-            y = y - 18.0;
+            let y = y - 18.0;
             try!(t.set_font(&times_italic, 16.0));
             try!(t.pos(left, y));
             try!(t.show(&s));
             Ok(y)
         }),
         ChordFileExpression::Comment{s} => c.text(|t| {
-            y = y - 14.0;
+            let y = y - 14.0;
             try!(t.set_font(&times_italic, 14.0));
             try!(t.pos(left, y));
             try!(t.show(&s));
@@ -273,11 +289,26 @@ fn render_token<'a>(token: ChordFileExpression, ypos: f32, left: f32,
             local_chords.insert(name, def);
             Ok(y)
         },
+        ChordFileExpression::Chorus{lines} => {
+            let mut y2 = y - 10.0;
+            for line in lines {
+                y2 = try!(render_token(line, y2, left + 10.0, c,
+                                       used_chords, local_chords));
+            }
+            y2 = y2 - 10.0;
+            try!(c.line(left - 3.0, y - 10.0, left - 3.0, y2));
+            try!(c.stroke());
+            Ok(y2)
+        }
+        ChordFileExpression::EndOfChorus => {
+            println!("Warning: Stray end of chorus in song!");
+            Ok(y)
+        }
         ChordFileExpression::Line{s} => c.text(|t| {
             let text_size = 14.0;
             let chord_size = 10.0;
-            y = y - 1.2 * ( if s.len() > 1 {text_size + chord_size}
-                            else { text_size } );
+            let y = y - 1.2 * ( if s.len() > 1 {text_size + chord_size}
+                                else { text_size } );
             try!(t.set_font(&times, text_size));
             try!(t.pos(left, y));
             let mut last_chord_width = 0.0;
