@@ -1,7 +1,8 @@
 use std::vec::Vec;
 use std::collections::BTreeMap;
 
-pub fn get_known_chords() -> BTreeMap<String, Vec<i8>> {
+lazy_static! {
+    pub static ref KNOWN_CHORDS: BTreeMap<String, Vec<i8>> = {
     let mut result = BTreeMap::new();
     {
         let mut chord = |name: &str, base_fret: i8, e: i8, a: i8, d: i8, g: i8, b: i8, e2: i8| {
@@ -131,4 +132,5 @@ pub fn get_known_chords() -> BTreeMap<String, Vec<i8>> {
         chord("G#m7",   4,   1, 3, 1, 1, 1, 1);
     }
     result
+    };
 }

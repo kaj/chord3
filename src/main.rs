@@ -1,6 +1,9 @@
 extern crate pdf;
 extern crate regex;
 
+#[macro_use]
+extern crate lazy_static;
+
 use pdf::{Canvas, Pdf, FontSource};
 use regex::Regex;
 use std::fs::File;
@@ -12,7 +15,7 @@ use std::env;
 use std::sync::Mutex;
 
 mod chords;
-use ::chords::get_known_chords;
+use ::chords::KNOWN_CHORDS;
 
 fn chordbox<'a>(c: &mut Canvas<'a, File>, left: f32, top: f32,
                 name: &str, strings: &Vec<i8>)
@@ -246,7 +249,6 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
                    -> io::Result<()> {
     let source = try!(ChoproParser::open(&songfilename));
     let (width, height) = (596.0, 842.0);
-    let known_chords = get_known_chords();
     let mut local_chords : BTreeMap<String, Vec<i8>> = BTreeMap::new();
     document.render_page(width, height, |c| {
         let mut y = height - 30.0;
@@ -270,7 +272,7 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
         for chord in used_chords.iter() {
             if let Some(chorddef) = local_chords.get(chord) {
                 try!(chordbox(c, x, 80.0, chord, chorddef));
-            } else if let Some(chorddef) = known_chords.get(chord) {
+            } else if let Some(chorddef) = KNOWN_CHORDS.get(chord) {
                 try!(chordbox(c, x, 80.0, chord, chorddef));
             } else {
                 println!("Warning: Unknown chord '{}'.", chord);
