@@ -31,7 +31,7 @@ fn chordbox<'a>(c: &mut Canvas<'a, File>, left: f32, top: f32,
             try!(c.stroke());
             0.0
         } else {
-            try!(c.right_text(left - 0.2 * dx, top - 0.9 * dy,
+            try!(c.right_text(left - 0.4 * dx, top - 0.9 * dy,
                               FontSource::Helvetica, dy, &format!("{}", barre)));
             1.6
         };
