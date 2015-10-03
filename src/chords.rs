@@ -1,8 +1,44 @@
 use std::vec::Vec;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+
+pub struct ChordHolder {
+    local: BTreeMap<String, Vec<i8>>,
+    used : BTreeSet<String>
+}
+
+impl ChordHolder {
+    pub fn new() -> ChordHolder {
+        ChordHolder {
+            local: BTreeMap::new(),
+            used: BTreeSet::new()
+        }
+    }
+    pub fn use_chord(&mut self, chord: &str) {
+        if !(chord == "NC" || chord == "N.C." ||
+             chord == "-" || chord == "%" || chord == "") {
+            self.used.insert(chord.to_string());
+        }
+    }
+    pub fn define(&mut self, chord: String, def: Vec<i8>) {
+        self.local.insert(chord, def);
+    }
+    pub fn get_used(&self) -> Vec<(&String, &Vec<i8>)> {
+        self.used.iter().map(|name| {
+            if let Some(def) = self.local.get(name) {
+                (name, def)
+            } else if let Some(def) = KNOWN_CHORDS.get(name) {
+                (name, def)
+            } else {
+                println!("Warning: Unknown chord '{}'.", name);
+                (name, &*UNKNOWN_CHORD)
+            }
+        }).collect()
+    }
+}
 
 lazy_static! {
-    pub static ref KNOWN_CHORDS: BTreeMap<String, Vec<i8>> = {
+    static ref UNKNOWN_CHORD: Vec<i8> = { vec!(0,-2,-2,-2,-2,-2,-2,-2) };
+    static ref KNOWN_CHORDS: BTreeMap<String, Vec<i8>> = {
     let mut result = BTreeMap::new();
     {
         let mut chord = |name: &str, base_fret: i8, e: i8, a: i8, d: i8, g: i8, b: i8, e2: i8| {

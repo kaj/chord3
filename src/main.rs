@@ -10,12 +10,11 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io;
 use std::vec::Vec;
-use std::collections::{BTreeSet, BTreeMap};
 use std::env;
 use std::sync::Mutex;
 
 mod chords;
-use ::chords::KNOWN_CHORDS;
+use ::chords::ChordHolder;
 
 fn chordbox<'a>(c: &mut Canvas<'a, File>, left: f32, top: f32,
                 name: &str, strings: &Vec<i8>)
@@ -249,7 +248,6 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
                    -> io::Result<()> {
     let source = try!(ChoproParser::open(&songfilename));
     let (width, height) = (596.0, 842.0);
-    let mut local_chords : BTreeMap<String, Vec<i8>> = BTreeMap::new();
     document.render_page(width, height, |c| {
         let mut y = height - 30.0;
         let left = 50.0;
@@ -257,27 +255,14 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
         //let times_italic = c.get_font(FontSource::Times_Italic);
         //let times = c.get_font(FontSource::Times_Roman);
         //let chordfont = c.get_font(FontSource::Helvetica_Oblique);
-        let mut used_chords : BTreeSet<String> = BTreeSet::new();
+        let mut chords = ChordHolder::new();
         for token in source {
-            y = try!(render_token(token, y, left, c,
-                                  &mut used_chords, &mut local_chords));
+            y = try!(render_token(token, y, left, c, &mut chords));
         }
-        // Remove non-chords that are displayed like chords above the text.
-        used_chords.remove("NC");
-        used_chords.remove("N.C.");
-        used_chords.remove("%");
-        used_chords.remove("-");
-        used_chords.remove("");
+        let used_chords = chords.get_used();
         let mut x = width - used_chords.len() as f32 * 40.0;
-        for chord in used_chords.iter() {
-            if let Some(chorddef) = local_chords.get(chord) {
-                try!(chordbox(c, x, 80.0, chord, chorddef));
-            } else if let Some(chorddef) = KNOWN_CHORDS.get(chord) {
-                try!(chordbox(c, x, 80.0, chord, chorddef));
-            } else {
-                println!("Warning: Unknown chord '{}'.", chord);
-                try!(chordbox(c, x, 80.0, chord, &vec!(0,-2,-2,-2,-2,-2,-2,-2)));
-            }
+        for (chord, chorddef) in used_chords {
+            try!(chordbox(c, x, 80.0, chord, chorddef));
             x = x + 40.0;
         }
         Ok(())
@@ -285,9 +270,7 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
 }
 
 fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
-                    c: &mut Canvas<'a, File>,
-                    used_chords : &mut BTreeSet<String>,
-                    local_chords : &mut BTreeMap<String, Vec<i8>>)
+                    c: &mut Canvas<'a, File>, chords: &mut ChordHolder)
                     -> io::Result<f32> {
     let times_bold = c.get_font(FontSource::Times_Bold);
     let times_italic = c.get_font(FontSource::Times_Italic);
@@ -317,14 +300,13 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
             Ok(y)
         }),
         ChordFileExpression::ChordDef{name, def} => {
-            local_chords.insert(name, def);
+            chords.define(name, def);
             Ok(y)
         },
         ChordFileExpression::Chorus{lines} => {
             let mut y2 = y - 10.0;
             for line in lines {
-                y2 = try!(render_token(line, y2, left + 10.0, c,
-                                       used_chords, local_chords));
+                y2 = try!(render_token(line, y2, left + 10.0, c, chords));
             }
             y2 = y2 - 10.0;
             try!(c.line(left - 3.0, y - 10.0, left - 3.0, y2));
@@ -360,7 +342,7 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
             let mut last_chord_width = 0.0;
             for (i, part) in s.iter().enumerate() {
                 if i % 2 == 1 {
-                    used_chords.insert(part.to_string());
+                    chords.use_chord(part);
                     try!(t.gsave());
                     try!(t.set_rise(text_size));
                     try!(t.set_font(&chordfont, chord_size));
