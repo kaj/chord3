@@ -249,7 +249,7 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
     let source = try!(ChoproParser::open(&songfilename));
     let (width, height) = (596.0, 842.0);
     document.render_page(width, height, |c| {
-        let mut y = height - 30.0;
+        let mut y = height - 20.0;
         let left = 50.0;
         //let times_bold = c.get_font(FontSource::Times_Bold);
         //let times_italic = c.get_font(FontSource::Times_Italic);
@@ -279,22 +279,22 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
     let tabfont = c.get_font(FontSource::Courier);
     match token {
         ChordFileExpression::Title{s} => c.text(|t| {
-            let y = y - 20.0;
-            try!(t.set_font(&times_bold, 18.0));
+            let y = y - 18.0;
+            try!(t.set_font(&times_bold, 16.0));
             try!(t.pos(left, y));
             try!(t.show(&s));
             Ok(y)
         }),
         ChordFileExpression::SubTitle{s} => c.text(|t| {
-            let y = y - 18.0;
-            try!(t.set_font(&times_italic, 16.0));
+            let y = y - 16.0;
+            try!(t.set_font(&times_italic, 14.0));
             try!(t.pos(left, y));
             try!(t.show(&s));
             Ok(y)
         }),
         ChordFileExpression::Comment{s} => c.text(|t| {
-            let y = y - 14.0;
-            try!(t.set_font(&times_italic, 14.0));
+            let y = y - 12.0;
+            try!(t.set_font(&times_italic, 12.0));
             try!(t.pos(left, y));
             try!(t.show(&s));
             Ok(y)
@@ -304,12 +304,12 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
             Ok(y)
         },
         ChordFileExpression::Chorus{lines} => {
-            let mut y2 = y - 10.0;
+            let mut y2 = y;
             for line in lines {
                 y2 = try!(render_token(line, y2, left + 10.0, c, chords));
             }
-            y2 = y2 - 10.0;
-            try!(c.line(left - 3.0, y - 10.0, left - 3.0, y2));
+            y2 = y2 - 4.0;
+            try!(c.line(left - 3.0, y, left - 3.0, y2));
             try!(c.stroke());
             Ok(y2)
         }
@@ -333,10 +333,10 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
             Ok(y)
         }
         ChordFileExpression::Line{s} => c.text(|t| {
-            let text_size = 14.0;
-            let chord_size = 10.0;
-            let y = y - 1.2 * ( if s.len() > 1 {text_size + chord_size}
-                                else { text_size } );
+            let text_size = 12.0;
+            let chord_size = 9.0;
+            let y = y - 1.1 * ( if s.len() == 1 { text_size }
+                                else { text_size + chord_size });
             try!(t.set_font(&times, text_size));
             try!(t.pos(left, y));
             let mut last_chord_width = 0.0;
@@ -344,7 +344,8 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
                 if i % 2 == 1 {
                     chords.use_chord(part);
                     try!(t.gsave());
-                    try!(t.set_rise(text_size));
+                    try!(t.set_rise(text_size * 0.9));
+                    try!(t.set_fill_gray(96));
                     try!(t.set_font(&chordfont, chord_size));
                     let chord_width = chordfont.get_width_raw(&part) as i32;
                     try!(t.show_j(&part, chord_width));
