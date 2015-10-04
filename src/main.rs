@@ -138,11 +138,11 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                     // TODO This should be a caseless match
                     // but since I fail to do that, just allow uppercase
                     // in some more or less random places ...
-                    "t" | "title" | "Title"
+                    "title" | "t" | "Title"
                         => Some(ChordFileExpression::Title{s: arg}),
-                    "st" | "subtitle"
+                    "subtitle" | "st"
                         => Some(ChordFileExpression::SubTitle{s:arg}),
-                    "c" | "ci"
+                    "comment" | "c" | "ci" | "cb"
                         => Some(ChordFileExpression::Comment{s:arg}),
                     "define" => {
                         //println!("Parse chord def '{}'", arg);
