@@ -29,10 +29,35 @@ impl ChordHolder {
             } else if let Some(def) = KNOWN_CHORDS.get(name) {
                 (name, def)
             } else {
-                println!("Warning: Unknown chord '{}'.", name);
-                (name, &*UNKNOWN_CHORD)
+                if let Some(repl) = ChordHolder::replacement(name) {
+                    if let Some(def) = KNOWN_CHORDS.get(&repl) {
+                        (name, def)
+                    } else {
+                        println!("Warning: Unknown chord {} (and {})",
+                                 name, repl);
+                        (name, &*UNKNOWN_CHORD)
+                    }
+                } else {
+                    println!("Warning: Unknown chord {}", name);
+                    (name, &*UNKNOWN_CHORD)
+                }
             }
         }).collect()
+    }
+    fn replacement(name: &str) -> Option<String> {
+        if name.starts_with("H") {
+            Some(format!("B{}", &name[1..]))
+        } else if name.len() >= 2 {
+            match &name[..2] {
+                "A#" => Some(format!("Bb{}", &name[2..])),
+                "D#" => Some(format!("Eb{}", &name[2..])),
+                "Gb" => Some(format!("F#{}", &name[2..])),
+                "Cb" => Some(format!("B{}", &name[2..])),
+                _ => None
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -52,6 +77,7 @@ lazy_static! {
         chord("Abm7",   4,   1, 3, 1, 1, 1, 1);
         chord("Abmaj7", 4,   1, 3, 2, 2, 1, 1);
         chord("A",      0,   x, 0, 2, 2, 2, 0);
+        chord("A/E",    0,   0, 0, 2, 2, 2, 0);
         chord("A6",     1,   x, 0, 2, 2, 2, 2);
         chord("A7",     0,   x, 0, 2, 0, 2, 0);
         chord("A7/C#",  4,   x, 1, 2, 3, 2, 2);
