@@ -309,7 +309,8 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
                 y2 = try!(render_token(line, y2, left + 10.0, c, chords));
             }
             y2 = y2 - 4.0;
-            try!(c.line(left - 3.0, y, left - 3.0, y2));
+            try!(c.set_line_width(0.5));
+            try!(c.line(left - 6.0, y, left - 6.0, y2));
             try!(c.stroke());
             Ok(y2)
         }
