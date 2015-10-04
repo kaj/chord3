@@ -3,6 +3,8 @@ extern crate regex;
 
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate clap;
 
 use pdf::{Canvas, Pdf, FontSource};
 use regex::Regex;
@@ -10,7 +12,6 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io;
 use std::vec::Vec;
-use std::env;
 use std::sync::Mutex;
 
 mod chords;
@@ -224,22 +225,34 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
 
 
 fn main() {
-    let mut file = File::create("foo.pdf").unwrap();
+    let args = clap_app!(myapp =>
+                         (version: env!("CARGO_PKG_VERSION"))
+                         (author: "Rasmus Kaj <rasmus@krats.se>")
+                         (about: "Create pdf songbooks from chopro source.")
+                         (@arg OUTPUT: -o --output +takes_value
+                          "Output PDF file name (default chords.pdf)")
+                         (@arg TITLE: --title +takes_value
+                          "Title (in metadata) of the output PDF file")
+                         (@arg AUTHOR: --author +takes_value
+                          "Author (in metadata) of the output PDF file")
+                         (@arg INPUT: +required +multiple
+                          "Chopro file(s) to parse")
+                         ).get_matches();
+
+    let filename = args.value_of("OUTPUT").unwrap_or("chords.pdf");
+    let mut file = File::create(filename).unwrap();
     let mut document = Pdf::new(&mut file).unwrap();
-    document.set_title("Songbook");
+    document.set_title(args.value_of("TITLE").unwrap_or("Songbook"));
+    if let Some(author) = args.value_of("AUTHOR") {
+        document.set_author(author);
+    }
     document.set_producer(concat!("chord3 version ",
                                   env!("CARGO_PKG_VERSION"),
                                   "\nhttps://github.com/kaj/chord3"));
-    let args = env::args();
-    let args = args.skip(1);
-    if args.len() > 0 {
-        for name in args {
-            if let Err(e) = render_song(&mut document, name.clone()) {
-                println!("Failed to handle {}: {}", name, e);
-            }
+    for name in args.values_of("INPUT").unwrap() {
+        if let Err(e) = render_song(&mut document, name.to_string()) {
+            println!("Failed to handle {}: {}", name, e);
         }
-    } else {
-        println!("Usage: {} [chordfile]...", env::args().nth(0).unwrap());
     }
     document.finish().unwrap();
 }
