@@ -61,8 +61,38 @@ impl ChordHolder {
     }
 }
 
+#[test]
+fn test_simple_chord() {
+    let mut test = ChordHolder::new();
+    test.use_chord("Am");
+    test.use_chord("E");
+    assert_eq!(vec!((&"Am".to_string(), &vec!(0,-1,0,2,2,1,0)),
+                    (&"E".to_string(), &vec!(0,0,2,2,1,0,0))),
+               test.get_used())
+}
+
+#[test]
+fn test_override_chord() {
+    let mut test = ChordHolder::new();
+    test.define("Am".to_string(), vec!(5, 1, 3, 3, 1, 1, 1));
+    test.use_chord("Am");
+    test.use_chord("E");
+    assert_eq!(vec!((&"Am".to_string(), &vec!(5,1,3,3,1,1,1)),
+                    (&"E".to_string(), &vec!(0,0,2,2,1,0,0))),
+               test.get_used())
+}
+
+#[test]
+fn test_nochord_and_unknown() {
+    let mut test = ChordHolder::new();
+    test.use_chord("N.C.");
+    test.use_chord("Smaj9");
+    assert_eq!(vec!((&"Smaj9".to_string(), &vec!(0,-2,-2,-2,-2,-2,-2))),
+               test.get_used())
+}
+
 lazy_static! {
-    static ref UNKNOWN_CHORD: Vec<i8> = { vec!(0,-2,-2,-2,-2,-2,-2,-2) };
+    static ref UNKNOWN_CHORD: Vec<i8> = { vec!(0,-2,-2,-2,-2,-2,-2) };
     static ref KNOWN_CHORDS: BTreeMap<String, Vec<i8>> = {
     let mut result = BTreeMap::new();
     {
