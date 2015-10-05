@@ -17,7 +17,7 @@ use std::sync::Mutex;
 mod chords;
 use ::chords::ChordHolder;
 
-fn chordbox<'a>(c: &mut Canvas<'a, File>, left: f32, top: f32,
+fn chordbox<'a>(c: &mut Canvas<'a>, left: f32, top: f32,
                 name: &str, strings: &Vec<i8>)
                 -> io::Result<()> {
     let dx = 5.0;
@@ -283,7 +283,7 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
 }
 
 fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
-                    c: &mut Canvas<'a, File>, chords: &mut ChordHolder)
+                    c: &mut Canvas<'a>, chords: &mut ChordHolder)
                     -> io::Result<f32> {
     let times_bold = c.get_font(FontSource::Times_Bold);
     let times_italic = c.get_font(FontSource::Times_Italic);
