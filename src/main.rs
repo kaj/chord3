@@ -13,6 +13,7 @@ use std::io::BufRead;
 use std::io;
 use std::vec::Vec;
 use std::sync::Mutex;
+use std::process::exit;
 
 mod chords;
 use ::chords::ChordHolder;
@@ -240,7 +241,11 @@ fn main() {
                          ).get_matches();
 
     let filename = args.value_of("OUTPUT").unwrap_or("chords.pdf");
-    let mut file = File::create(filename).unwrap();
+    let mut file = File::create(filename).map_err(|err| {
+        println!("Failed to open {}: {}", filename, err);
+        exit(1);
+    }).unwrap();
+
     let mut document = Pdf::new(&mut file).unwrap();
     document.set_title(args.value_of("TITLE").unwrap_or("Songbook"));
     if let Some(author) = args.value_of("AUTHOR") {
