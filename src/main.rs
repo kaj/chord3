@@ -291,13 +291,16 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
     let chordfont = c.get_font(FontSource::Helvetica_Oblique);
     let tabfont = c.get_font(FontSource::Courier);
     match token {
-        ChordFileExpression::Title{s} => c.text(|t| {
-            let y = y - 18.0;
-            try!(t.set_font(&times_bold, 16.0));
-            try!(t.pos(left, y));
-            try!(t.show(&s));
-            Ok(y)
-        }),
+        ChordFileExpression::Title{s} => {
+            c.add_outline(&s);
+            c.text(|t| {
+                let y = y - 18.0;
+                try!(t.set_font(&times_bold, 16.0));
+                try!(t.pos(left, y));
+                try!(t.show(&s));
+                Ok(y)
+            })
+        },
         ChordFileExpression::SubTitle{s} => c.text(|t| {
             let y = y - 16.0;
             try!(t.set_font(&times_italic, 14.0));
