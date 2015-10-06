@@ -236,6 +236,8 @@ fn main() {
                           "Title (in metadata) of the output PDF file")
                          (@arg AUTHOR: --author +takes_value
                           "Author (in metadata) of the output PDF file")
+                         (@arg SOURCENAMES: --sourcenames
+                          "Show name of chopro source file on page")
                          (@arg INPUT: +required +multiple
                           "Chopro file(s) to parse")
                          ).get_matches();
@@ -254,15 +256,19 @@ fn main() {
     document.set_producer(concat!("chord3 version ",
                                   env!("CARGO_PKG_VERSION"),
                                   "\nhttps://github.com/kaj/chord3"));
+
+    let show_sourcenames = args.is_present("SOURCENAMES");
+
     for name in args.values_of("INPUT").unwrap() {
-        if let Err(e) = render_song(&mut document, name.to_string()) {
+        if let Err(e) = render_song(&mut document, name, show_sourcenames) {
             println!("Failed to handle {}: {}", name, e);
         }
     }
     document.finish().unwrap();
 }
 
-fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
+fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
+                   show_sourcename: bool)
                    -> io::Result<()> {
     let source = try!(ChoproParser::open(&songfilename));
     let (width, height) = (596.0, 842.0);
@@ -273,6 +279,14 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: String)
         //let times_italic = c.get_font(FontSource::Times_Italic);
         //let times = c.get_font(FontSource::Times_Roman);
         //let chordfont = c.get_font(FontSource::Helvetica_Oblique);
+        if show_sourcename {
+            let font = c.get_font(FontSource::Helvetica_Oblique);
+            try!(c.text(|t| {
+                try!(t.set_font(&font, 10.0));
+                try!(t.pos(left, 20.0));
+                t.show(songfilename)
+            }));
+        }
         let mut chords = ChordHolder::new();
         for token in source {
             y = try!(render_token(token, y, left, c, &mut chords));
