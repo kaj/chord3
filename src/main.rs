@@ -85,11 +85,13 @@ enum ChordFileExpression {
     EndOfChorus,
     Tab{lines: Vec<String>},
     EndOfTab,
+    PageBreak,
     Line{s: Vec<String>}
 }
 
 struct ChoproParser<R: io::Read> {
-    source: Mutex<io::Lines<io::BufReader<R>>>
+    source: Mutex<io::Lines<io::BufReader<R>>>,
+    eof: bool
 }
 
 impl ChoproParser<File> {
@@ -102,7 +104,8 @@ impl<R: io::Read> ChoproParser<R> {
     fn new(source: R) -> ChoproParser<R> {
         let reader = io::BufReader::new(source);
         ChoproParser {
-            source: Mutex::new(reader.lines())
+            source: Mutex::new(reader.lines()),
+            eof: false
         }
     }
 
@@ -118,13 +121,19 @@ impl<R: io::Read> ChoproParser<R> {
                 },
                 Some(Err(e)) => {
                     println!("Failed to read source: {}", e);
+                    self.eof = true;
                     return None
                 },
                 _ => {
+                    self.eof = true;
                     return None
                 }
             }
         }
+    }
+
+    fn is_eof(&self) -> bool {
+        self.eof
     }
 }
 
@@ -202,6 +211,9 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                     }
                     "eot" | "end_of_tab" =>
                         Some(ChordFileExpression::EndOfTab),
+                    "colb" | "page_break" | "np" | "new_song" =>
+                        // TODO Separate implementations, this is a fallback:
+                        Some(ChordFileExpression::PageBreak),
                     x => {
                         println!("unknown expression {}", x);
                         Some(ChordFileExpression::Comment{s:caps.at(0).unwrap().to_string()})
@@ -270,35 +282,41 @@ fn main() {
 fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
                    show_sourcename: bool)
                    -> io::Result<()> {
-    let source = try!(ChoproParser::open(&songfilename));
+    let mut source = try!(ChoproParser::open(&songfilename));
+    let mut chords = ChordHolder::new();
     let (width, height) = (596.0, 842.0);
-    document.render_page(width, height, |c| {
-        let mut y = height - 20.0;
-        let left = 50.0;
-        //let times_bold = c.get_font(FontSource::Times_Bold);
-        //let times_italic = c.get_font(FontSource::Times_Italic);
-        //let times = c.get_font(FontSource::Times_Roman);
-        //let chordfont = c.get_font(FontSource::Helvetica_Oblique);
-        if show_sourcename {
-            let font = c.get_font(FontSource::Helvetica_Oblique);
-            try!(c.text(|t| {
-                try!(t.set_font(&font, 10.0));
-                try!(t.pos(left, 20.0));
-                t.show(songfilename)
-            }));
-        }
-        let mut chords = ChordHolder::new();
-        for token in source {
-            y = try!(render_token(token, y, left, c, &mut chords));
-        }
-        let used_chords = chords.get_used();
-        let mut x = width - used_chords.len() as f32 * 40.0;
-        for (chord, chorddef) in used_chords {
-            try!(chordbox(c, x, 80.0, chord, chorddef));
-            x = x + 40.0;
-        }
-        Ok(())
-    })
+    while !source.is_eof() {
+        try!(document.render_page(width, height, |c| {
+            let mut y = height - 20.0;
+            let left = 50.0;
+            //let times_bold = c.get_font(FontSource::Times_Bold);
+            //let times_italic = c.get_font(FontSource::Times_Italic);
+            //let times = c.get_font(FontSource::Times_Roman);
+            //let chordfont = c.get_font(FontSource::Helvetica_Oblique);
+            if show_sourcename {
+                let font = c.get_font(FontSource::Helvetica_Oblique);
+                try!(c.text(|t| {
+                    try!(t.set_font(&font, 10.0));
+                    try!(t.pos(left, 20.0));
+                    t.show(songfilename)
+                }));
+            }
+            while let Some(token) = source.next() {
+                y = try!(render_token(token, y, left, c, &mut chords));
+                if y < 30.0 {
+                    return Ok(())
+                }
+            }
+            let used_chords = chords.get_used();
+            let mut x = width - used_chords.len() as f32 * 40.0;
+            for (chord, chorddef) in used_chords {
+                try!(chordbox(c, x, 80.0, chord, chorddef));
+                x = x + 40.0;
+            }
+            Ok(())
+        }));
+    }
+    Ok(())
 }
 
 fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
@@ -368,6 +386,8 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
             println!("Warning: Stray end of tab in song!");
             Ok(y)
         }
+        ChordFileExpression::PageBreak =>
+            Ok(0.0),
         ChordFileExpression::Line{s} => c.text(|t| {
             let text_size = 12.0;
             let chord_size = 9.0;
