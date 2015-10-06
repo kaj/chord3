@@ -296,9 +296,9 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
             if show_sourcename {
                 let font = c.get_font(FontSource::Helvetica_Oblique);
                 try!(c.text(|t| {
-                    try!(t.set_font(&font, 10.0));
-                    try!(t.pos(left, 20.0));
-                    t.show(songfilename)
+                    t.pos(left, 20.0)
+                        .and(t.set_font(&font, 10.0))
+                        .and(t.show(songfilename))
                 }));
             }
             while let Some(token) = source.next() {
