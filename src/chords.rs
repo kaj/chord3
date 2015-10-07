@@ -15,7 +15,8 @@ impl ChordHolder {
     }
     pub fn use_chord(&mut self, chord: &str) {
         if !(chord == "NC" || chord == "N.C." ||
-             chord == "-" || chord == "%" || chord == "") {
+             chord == "-" || chord == "%" || chord == "" ||
+             chord.starts_with('/') || chord.starts_with('x')) {
             self.used.insert(chord.to_string());
         }
     }
