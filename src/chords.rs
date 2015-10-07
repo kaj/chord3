@@ -22,24 +22,24 @@ impl ChordHolder {
     pub fn define(&mut self, chord: String, def: Vec<i8>) {
         self.local.insert(chord, def);
     }
-    pub fn get_used(&self) -> Vec<(&String, &Vec<i8>)> {
+    pub fn get_used(&self) -> Vec<(&str, &Vec<i8>)> {
         self.used.iter().map(|name| {
             if let Some(def) = self.local.get(name) {
-                (name, def)
+                (name as &str, def)
             } else if let Some(def) = KNOWN_CHORDS.get(name) {
-                (name, def)
+                (name as &str, def)
             } else {
                 if let Some(repl) = ChordHolder::replacement(name) {
                     if let Some(def) = KNOWN_CHORDS.get(&repl) {
-                        (name, def)
+                        (name as &str, def)
                     } else {
                         println!("Warning: Unknown chord {} (and {})",
                                  name, repl);
-                        (name, &*UNKNOWN_CHORD)
+                        (name as &str, &*UNKNOWN_CHORD)
                     }
                 } else {
                     println!("Warning: Unknown chord {}", name);
-                    (name, &*UNKNOWN_CHORD)
+                    (name as &str, &*UNKNOWN_CHORD)
                 }
             }
         }).collect()

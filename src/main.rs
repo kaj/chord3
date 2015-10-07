@@ -86,6 +86,7 @@ enum ChordFileExpression {
     Tab{lines: Vec<String>},
     EndOfTab,
     PageBreak,
+    NewSong,
     Line{s: Vec<String>}
 }
 
@@ -211,9 +212,11 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                     }
                     "eot" | "end_of_tab" =>
                         Some(ChordFileExpression::EndOfTab),
-                    "colb" | "page_break" | "np" | "new_song" =>
+                    "colb" | "page_break" | "np" =>
                         // TODO Separate implementations, this is a fallback:
                         Some(ChordFileExpression::PageBreak),
+                    "new_song" =>
+                        Some(ChordFileExpression::NewSong),
                     x => {
                         println!("unknown expression {}", x);
                         Some(ChordFileExpression::Comment{s:caps.at(0).unwrap().to_string()})
@@ -309,21 +312,43 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
                               &format!("{}", pageno)));
             while let Some(token) = source.next() {
                 y = try!(render_token(token, y, left, c, &mut chords));
+                if y == std::f32::NEG_INFINITY {
+                    try!(render_chordboxes(c, chords.get_used(), width));
+                    chords = ChordHolder::new();
+                }
                 if y < 30.0 {
                     pageno = pageno + 1;
                     return Ok(())
                 }
             }
-            let used_chords = chords.get_used();
-            let mut x = width - used_chords.len() as f32 * 40.0;
-            for (chord, chorddef) in used_chords {
-                try!(chordbox(c, x, 80.0, chord, chorddef));
-                x = x + 40.0;
-            }
+            try!(render_chordboxes(c, chords.get_used(), width));
             Ok(())
         }));
     }
     Ok(pageno)
+}
+
+fn render_chordboxes<'a>(c: &mut Canvas<'a>, used_chords: Vec<(&str, &Vec<i8>)>,
+                     width: f32) -> io::Result<()> {
+    let right = width - 15.0;
+    let left = 50.0;
+    let box_width = 40.0;
+    let box_height = 60.0;
+    let n_chords = used_chords.len() as u32;
+    let n_aside = ((width - left) / box_width) as u32;
+    let n_height = (n_chords + n_aside - 1) / n_aside;
+    let n_first = n_chords - (n_height - 1) * n_aside;
+    let mut x = width - n_first as f32 * box_width;
+    let mut y = 10.0 + n_height as f32 * box_height;
+    for (chord, chorddef) in used_chords {
+        try!(chordbox(c, x, y, chord, chorddef));
+        x = x + box_width;
+        if x > right {
+            x = width - n_aside as f32 * box_width;
+            y = y - box_height;
+        }
+    }
+    Ok(())
 }
 
 fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
@@ -395,6 +420,8 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
         }
         ChordFileExpression::PageBreak =>
             Ok(0.0),
+        ChordFileExpression::NewSong =>
+            Ok(std::f32::NEG_INFINITY),
         ChordFileExpression::Line{s} => c.text(|t| {
             let text_size = 12.0;
             let chord_size = 9.0;
