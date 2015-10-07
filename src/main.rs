@@ -271,20 +271,23 @@ fn main() {
 
     let show_sourcenames = args.is_present("SOURCENAMES");
 
+    let mut pageno = 1;
     for name in args.values_of("INPUT").unwrap() {
-        if let Err(e) = render_song(&mut document, name, show_sourcenames) {
-            println!("Failed to handle {}: {}", name, e);
+        match render_song(&mut document, name, show_sourcenames, pageno) {
+            Ok(p) => pageno = p + 1,
+            Err(e) => println!("Failed to handle {}: {}", name, e)
         }
     }
     document.finish().unwrap();
 }
 
 fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
-                   show_sourcename: bool)
-                   -> io::Result<()> {
+                   show_sourcename: bool, pageno: u32)
+                   -> io::Result<u32> {
     let mut source = try!(ChoproParser::open(&songfilename));
     let mut chords = ChordHolder::new();
     let (width, height) = (596.0, 842.0);
+    let mut pageno = pageno;
     while !source.is_eof() {
         try!(document.render_page(width, height, |c| {
             let mut y = height - 20.0;
@@ -301,9 +304,13 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
                         .and(t.show(songfilename))
                 }));
             }
+            try!(c.right_text(width - 15.0, 20.0,
+                              FontSource::Times_Italic, 12.0,
+                              &format!("{}", pageno)));
             while let Some(token) = source.next() {
                 y = try!(render_token(token, y, left, c, &mut chords));
                 if y < 30.0 {
+                    pageno = pageno + 1;
                     return Ok(())
                 }
             }
@@ -316,7 +323,7 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
             Ok(())
         }));
     }
-    Ok(())
+    Ok(pageno)
 }
 
 fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
