@@ -85,6 +85,8 @@ enum ChordFileExpression {
     EndOfChorus,
     Tab{lines: Vec<String>},
     EndOfTab,
+    StartColumns{n_columns: u8},
+    ColumnBreak,
     PageBreak,
     NewSong,
     Line{s: Vec<String>}
@@ -212,7 +214,13 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                     }
                     "eot" | "end_of_tab" =>
                         Some(ChordFileExpression::EndOfTab),
-                    "colb" | "page_break" | "np" =>
+                    "columns" =>
+                        Some(ChordFileExpression::StartColumns{
+                            n_columns: arg.parse::<u8>().unwrap()
+                        }),
+                    "colb" =>
+                        Some(ChordFileExpression::ColumnBreak),
+                    "page_break" | "np" =>
                         // TODO Separate implementations, this is a fallback:
                         Some(ChordFileExpression::PageBreak),
                     "new_song" =>
@@ -291,10 +299,13 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
     let mut chords = ChordHolder::new();
     let (width, height) = (596.0, 842.0);
     let mut pageno = pageno;
+    let page_left = 50.0;
+    let mut left = page_left;
+    let mut column_top = height - 20.0;
+    let mut n_cols = 1;
     while !source.is_eof() {
         try!(document.render_page(width, height, |c| {
-            let mut y = height - 20.0;
-            let left = 50.0;
+            let mut y = column_top;
             //let times_bold = c.get_font(FontSource::Times_Bold);
             //let times_italic = c.get_font(FontSource::Times_Italic);
             //let times = c.get_font(FontSource::Times_Roman);
@@ -311,14 +322,27 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
                               FontSource::Times_Italic, 12.0,
                               &format!("{}", pageno)));
             while let Some(token) = source.next() {
-                y = try!(render_token(token, y, left, c, &mut chords));
-                if y == std::f32::NEG_INFINITY {
-                    try!(render_chordboxes(c, chords.get_used(), width));
-                    chords = ChordHolder::new();
-                }
-                if y < 30.0 {
-                    pageno = pageno + 1;
-                    return Ok(())
+                if let ChordFileExpression::StartColumns{n_columns} = token {
+                    column_top = y;
+                    n_cols = n_columns;
+                } else {
+                    y = try!(render_token(token, y, left, c, &mut chords));
+                    if y == std::f32::NEG_INFINITY {
+                        try!(render_chordboxes(c, chords.get_used(), width));
+                        n_cols = 1;
+                        chords = ChordHolder::new();
+                    }
+                    if y < 50.0 {
+                        left += (width - page_left) / n_cols as f32;
+                        if left < width - 10.0 {
+                            y = column_top;
+                        } else {
+                            pageno = pageno + 1;
+                            left = page_left;
+                            column_top = height - 20.0;
+                            return Ok(())
+                        }
+                    }
                 }
             }
             try!(render_chordboxes(c, chords.get_used(), width));
@@ -418,6 +442,10 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
             println!("Warning: Stray end of tab in song!");
             Ok(y)
         }
+        ChordFileExpression::StartColumns{n_columns} =>
+            Ok(y),
+        ChordFileExpression::ColumnBreak =>
+            Ok(0.0),
         ChordFileExpression::PageBreak =>
             Ok(0.0),
         ChordFileExpression::NewSong =>
