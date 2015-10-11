@@ -359,17 +359,19 @@ fn render_chordboxes<'a>(c: &mut Canvas<'a>, used_chords: Vec<(&str, &Vec<i8>)>,
     let box_width = 40.0;
     let box_height = 60.0;
     let n_chords = used_chords.len() as u32;
-    let n_aside = ((width - left) / box_width) as u32;
-    let n_height = (n_chords + n_aside - 1) / n_aside;
-    let n_first = n_chords - (n_height - 1) * n_aside;
-    let mut x = width - n_first as f32 * box_width;
-    let mut y = 10.0 + n_height as f32 * box_height;
-    for (chord, chorddef) in used_chords {
-        try!(chordbox(c, x, y, chord, chorddef));
-        x = x + box_width;
-        if x > right {
-            x = width - n_aside as f32 * box_width;
-            y = y - box_height;
+    if n_chords > 0 {
+        let n_aside = ((width - left) / box_width) as u32;
+        let n_height = (n_chords + n_aside - 1) / n_aside;
+        let n_first = n_chords - (n_height - 1) * n_aside;
+        let mut x = width - n_first as f32 * box_width;
+        let mut y = 10.0 + n_height as f32 * box_height;
+        for (chord, chorddef) in used_chords {
+            try!(chordbox(c, x, y, chord, chorddef));
+            x = x + box_width;
+            if x > right {
+                x = width - n_aside as f32 * box_width;
+                y = y - box_height;
+            }
         }
     }
     Ok(())
