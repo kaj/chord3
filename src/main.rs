@@ -214,7 +214,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                     }
                     "eot" | "end_of_tab" =>
                         Some(ChordFileExpression::EndOfTab),
-                    "columns" =>
+                    "columns" | "col" =>
                         Some(ChordFileExpression::StartColumns{
                             n_columns: arg.parse::<u8>().unwrap()
                         }),
