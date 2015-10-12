@@ -17,6 +17,8 @@ use std::process::exit;
 
 mod chords;
 use ::chords::ChordHolder;
+mod pagedim;
+use ::pagedim::PageDim;
 
 fn chordbox<'a>(c: &mut Canvas<'a>, left: f32, top: f32,
                 name: &str, strings: &Vec<i8>)
@@ -282,10 +284,10 @@ fn main() {
 
     let show_sourcenames = args.is_present("SOURCENAMES");
 
-    let mut pageno = 1;
+    let mut page = PageDim::a4(1);
     for name in args.values_of("INPUT").unwrap() {
-        match render_song(&mut document, name, show_sourcenames, pageno) {
-            Ok(p) => pageno = p + 1,
+        match render_song(&mut document, name, show_sourcenames, page) {
+            Ok(p) => page = p.next(),
             Err(e) => println!("Failed to handle {}: {}", name, e)
         }
     }
@@ -293,34 +295,41 @@ fn main() {
 }
 
 fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
-                   show_sourcename: bool, pageno: u32)
-                   -> io::Result<u32> {
+                   show_sourcename: bool, page: PageDim)
+                   -> io::Result<PageDim> {
     let mut source = try!(ChoproParser::open(&songfilename));
     let mut chords = ChordHolder::new();
-    let (width, height) = (596.0, 842.0);
-    let mut pageno = pageno;
-    let page_left = 50.0;
-    let mut left = page_left;
-    let mut column_top = height - 20.0;
+    let mut page = page;
+    let mut column_top = page.top();
+    let mut left = page.left();
     let mut n_cols = 1;
     while !source.is_eof() {
-        try!(document.render_page(width, height, |c| {
-            let mut y = column_top;
-            //let times_bold = c.get_font(FontSource::Times_Bold);
-            //let times_italic = c.get_font(FontSource::Times_Italic);
-            //let times = c.get_font(FontSource::Times_Roman);
-            //let chordfont = c.get_font(FontSource::Helvetica_Oblique);
+        try!(document.render_page(page.width(), page.height(), |c| {
+            let mut y = page.top();
             if show_sourcename {
-                let font = c.get_font(FontSource::Helvetica_Oblique);
-                try!(c.text(|t| {
-                    t.pos(left, 20.0)
-                        .and(t.set_font(&font, 10.0))
-                        .and(t.show(songfilename))
-                }));
+                if page.is_left() {
+                    try!(c.right_text(page.right(), 20.0,
+                                      FontSource::Helvetica_Oblique, 10.0,
+                                      songfilename));
+                } else {
+                    let font = c.get_font(FontSource::Helvetica_Oblique);
+                    try!(c.text(|t| {
+                        t.pos(page.left(), 20.0).and(t.set_font(&font, 10.0))
+                            .and(t.show(songfilename))
+                    }));
+                }
             }
-            try!(c.right_text(width - 15.0, 20.0,
-                              FontSource::Times_Italic, 12.0,
-                              &format!("{}", pageno)));
+            if page.is_left() {
+                let font = c.get_font(FontSource::Times_Italic);
+                try!(c.text(|t| {
+                    t.pos(page.left(), 20.0).and(t.set_font(&font, 10.0))
+                        .and(t.show(&format!("{}", page.pageno())))
+                }));
+            } else {
+                try!(c.right_text(page.right(), 20.0,
+                                  FontSource::Times_Italic, 12.0,
+                                  &format!("{}", page.pageno())));
+            }
             while let Some(token) = source.next() {
                 if let ChordFileExpression::StartColumns{n_columns} = token {
                     column_top = y;
@@ -328,48 +337,49 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
                 } else {
                     y = try!(render_token(token, y, left, c, &mut chords));
                     if y == std::f32::NEG_INFINITY {
-                        try!(render_chordboxes(c, chords.get_used(), width));
+                        try!(render_chordboxes(c, page, chords.get_used()));
                         n_cols = 1;
                         chords = ChordHolder::new();
+                        page = page.next();
+                        left = page.left();
+                        return Ok(())
                     }
                     if y < 50.0 {
-                        left += (width - page_left) / n_cols as f32;
-                        if left < width - 10.0 {
+                        left += page.inner_width() / n_cols as f32 + 10.0;
+                        if left < page.right() {
                             y = column_top;
                         } else {
-                            pageno = pageno + 1;
-                            left = page_left;
-                            column_top = height - 20.0;
+                            page = page.next();
+                            left = page.left();
                             return Ok(())
                         }
                     }
                 }
             }
-            try!(render_chordboxes(c, chords.get_used(), width));
+            try!(render_chordboxes(c, page, chords.get_used()));
             Ok(())
         }));
     }
-    Ok(pageno)
+    Ok(page)
 }
 
-fn render_chordboxes<'a>(c: &mut Canvas<'a>, used_chords: Vec<(&str, &Vec<i8>)>,
-                     width: f32) -> io::Result<()> {
-    let right = width - 15.0;
-    let left = 50.0;
+fn render_chordboxes<'a>(c: &mut Canvas<'a>, page: PageDim,
+                         used_chords: Vec<(&str, &Vec<i8>)>)
+                         -> io::Result<()> {
     let box_width = 40.0;
     let box_height = 60.0;
     let n_chords = used_chords.len() as u32;
     if n_chords > 0 {
-        let n_aside = ((width - left) / box_width) as u32;
+        let n_aside = (page.inner_width() / box_width) as u32;
         let n_height = (n_chords + n_aside - 1) / n_aside;
         let n_first = n_chords - (n_height - 1) * n_aside;
-        let mut x = width - n_first as f32 * box_width;
+        let mut x = page.right() - n_first as f32 * box_width;
         let mut y = 10.0 + n_height as f32 * box_height;
         for (chord, chorddef) in used_chords {
-            try!(chordbox(c, x, y, chord, chorddef));
+            try!(chordbox(c, x+15.0, y, chord, chorddef));
             x = x + box_width;
-            if x > right {
-                x = width - n_aside as f32 * box_width;
+            if x >= page.right() {
+                x = page.right() - n_aside as f32 * box_width;
                 y = y - box_height;
             }
         }
