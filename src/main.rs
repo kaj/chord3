@@ -312,23 +312,17 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
                                       FontSource::Helvetica_Oblique, 10.0,
                                       songfilename));
                 } else {
-                    let font = c.get_font(FontSource::Helvetica_Oblique);
-                    try!(c.text(|t| {
-                        t.pos(page.left(), 20.0).and(t.set_font(&font, 10.0))
-                            .and(t.show(songfilename))
-                    }));
+                    try!(c.left_text(page.left(), 20.0,
+                                     FontSource::Helvetica_Oblique, 10.0,
+                                     songfilename));
                 }
             }
             if page.is_left() {
-                let font = c.get_font(FontSource::Times_Italic);
-                try!(c.text(|t| {
-                    t.pos(page.left(), 20.0).and(t.set_font(&font, 10.0))
-                        .and(t.show(&format!("{}", page.pageno())))
-                }));
+                try!(c.left_text(page.left(), 20.0, FontSource::Times_Italic,
+                                 12.0, &format!("{}", page.pageno())));
             } else {
-                try!(c.right_text(page.right(), 20.0,
-                                  FontSource::Times_Italic, 12.0,
-                                  &format!("{}", page.pageno())));
+                try!(c.right_text(page.right(), 20.0, FontSource::Times_Italic,
+                                  12.0, &format!("{}", page.pageno())));
             }
             while let Some(token) = source.next() {
                 if let ChordFileExpression::StartColumns{n_columns} = token {
