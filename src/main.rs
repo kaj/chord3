@@ -150,11 +150,8 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
             let re = Regex::new(r"\{(?P<cmd>\w+)(?::?\s*(?P<arg>.*))?\}").unwrap();
             if let Some(caps) = re.captures(&line) {
                 let arg = caps.name("arg").unwrap_or("").to_string();
-                match caps.name("cmd").unwrap() {
-                    // TODO This should be a caseless match
-                    // but since I fail to do that, just allow uppercase
-                    // in some more or less random places ...
-                    "title" | "t" | "Title"
+                match &*caps.name("cmd").unwrap().to_lowercase() {
+                    "title" | "t"
                         => Some(ChordFileExpression::Title{s: arg}),
                     "subtitle" | "st"
                         => Some(ChordFileExpression::SubTitle{s:arg}),
