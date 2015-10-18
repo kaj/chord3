@@ -445,8 +445,11 @@ fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
             println!("Warning: Stray end of tab in song!");
             Ok(y)
         }
-        ChordFileExpression::StartColumns{n_columns} =>
-            Ok(y),
+        ChordFileExpression::StartColumns{n_columns} => {
+            println!("Warning: StartColumns({}) should be handled earlier",
+                    n_columns);
+            Ok(y)
+        }
         ChordFileExpression::ColumnBreak =>
             Ok(0.0),
         ChordFileExpression::PageBreak =>
