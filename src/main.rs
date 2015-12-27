@@ -6,7 +6,7 @@ extern crate lazy_static;
 #[macro_use]
 extern crate clap;
 
-use pdf::{Canvas, Pdf, FontSource};
+use pdf::{Canvas, Pdf, BuiltinFont, FontSource};
 use regex::Regex;
 use std::fs::File;
 use std::io::BufRead;
@@ -28,7 +28,7 @@ fn chordbox<'a>(c: &mut Canvas<'a>, left: f32, top: f32,
     let right = left + 5.0 * dx;
     let bottom = top - 4.4 * dy;
     try!(c.center_text(left + 2.0 * dx, top + dy,
-                       FontSource::Helvetica_Oblique, 12.0, name));
+                       BuiltinFont::Helvetica_Oblique, 12.0, name));
     let barre = strings[0];
     let up =
         if barre < 2 {
@@ -38,7 +38,7 @@ fn chordbox<'a>(c: &mut Canvas<'a>, left: f32, top: f32,
             0.0
         } else {
             try!(c.right_text(left - 0.4 * dx, top - 0.9 * dy,
-                              FontSource::Helvetica, dy, &format!("{}", barre)));
+                              BuiltinFont::Helvetica, dy, &format!("{}", barre)));
             1.6
         };
     try!(c.set_line_width(0.3));
@@ -265,12 +265,10 @@ fn main() {
                          ).get_matches();
 
     let filename = args.value_of("OUTPUT").unwrap_or("chords.pdf");
-    let mut file = File::create(filename).map_err(|err| {
+    let mut document = Pdf::create(filename).map_err(|err| {
         println!("Failed to open {}: {}", filename, err);
         exit(1);
     }).unwrap();
-
-    let mut document = Pdf::new(&mut file).unwrap();
     document.set_title(args.value_of("TITLE").unwrap_or("Songbook"));
     if let Some(author) = args.value_of("AUTHOR") {
         document.set_author(author);
@@ -291,7 +289,7 @@ fn main() {
     document.finish().unwrap();
 }
 
-fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
+fn render_song<'a>(document: &mut Pdf, songfilename: &str,
                    show_sourcename: bool, page: PageDim)
                    -> io::Result<PageDim> {
     let mut source = try!(ChoproParser::open(&songfilename));
@@ -306,19 +304,19 @@ fn render_song<'a>(document: &mut Pdf<'a, File>, songfilename: &str,
             if show_sourcename {
                 if page.is_left() {
                     try!(c.right_text(page.right(), 20.0,
-                                      FontSource::Helvetica_Oblique, 10.0,
+                                      BuiltinFont::Helvetica_Oblique, 10.0,
                                       songfilename));
                 } else {
                     try!(c.left_text(page.left(), 20.0,
-                                     FontSource::Helvetica_Oblique, 10.0,
+                                     BuiltinFont::Helvetica_Oblique, 10.0,
                                      songfilename));
                 }
             }
             if page.is_left() {
-                try!(c.left_text(page.left(), 20.0, FontSource::Times_Italic,
+                try!(c.left_text(page.left(), 20.0, BuiltinFont::Times_Italic,
                                  12.0, &format!("{}", page.pageno())));
             } else {
-                try!(c.right_text(page.right(), 20.0, FontSource::Times_Italic,
+                try!(c.right_text(page.right(), 20.0, BuiltinFont::Times_Italic,
                                   12.0, &format!("{}", page.pageno())));
             }
             while let Some(token) = source.next() {
@@ -381,11 +379,11 @@ fn render_chordboxes<'a>(c: &mut Canvas<'a>, page: PageDim,
 fn render_token<'a>(token: ChordFileExpression, y: f32, left: f32,
                     c: &mut Canvas<'a>, chords: &mut ChordHolder)
                     -> io::Result<f32> {
-    let times_bold = c.get_font(FontSource::Times_Bold);
-    let times_italic = c.get_font(FontSource::Times_Italic);
-    let times = c.get_font(FontSource::Times_Roman);
-    let chordfont = c.get_font(FontSource::Helvetica_Oblique);
-    let tabfont = c.get_font(FontSource::Courier);
+    let times_bold = c.get_font(BuiltinFont::Times_Bold);
+    let times_italic = c.get_font(BuiltinFont::Times_Italic);
+    let times = c.get_font(BuiltinFont::Times_Roman);
+    let chordfont = c.get_font(BuiltinFont::Helvetica_Oblique);
+    let tabfont = c.get_font(BuiltinFont::Courier);
     match token {
         ChordFileExpression::Title{s} => {
             c.add_outline(&s);
