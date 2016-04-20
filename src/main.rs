@@ -3,7 +3,6 @@ extern crate regex;
 
 #[macro_use]
 extern crate lazy_static;
-#[macro_use]
 extern crate clap;
 
 use pdf::{Canvas, Pdf, BuiltinFont, FontSource};
@@ -14,6 +13,7 @@ use std::io;
 use std::vec::Vec;
 use std::sync::Mutex;
 use std::process::exit;
+use clap::{Arg, App};
 
 mod chords;
 use ::chords::ChordHolder;
@@ -248,21 +248,21 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
 
 
 fn main() {
-    let args = clap_app!(myapp =>
-                         (version: env!("CARGO_PKG_VERSION"))
-                         (author: "Rasmus Kaj <rasmus@krats.se>")
-                         (about: "Create pdf songbooks from chopro source.")
-                         (@arg OUTPUT: -o --output +takes_value
-                          "Output PDF file name (default chords.pdf)")
-                         (@arg TITLE: --title +takes_value
-                          "Title (in metadata) of the output PDF file")
-                         (@arg AUTHOR: --author +takes_value
-                          "Author (in metadata) of the output PDF file")
-                         (@arg SOURCENAMES: --sourcenames
-                          "Show name of chopro source file on page")
-                         (@arg INPUT: +required +multiple
-                          "Chopro file(s) to parse")
-                         ).get_matches();
+    let args = App::new("chord3")
+        .version(env!("CARGO_PKG_VERSION"))
+        .author("Rasmus Kaj <rasmus@krats.se>")
+        .about("Create pdf songbooks from chopro source.")
+        .arg(Arg::with_name("OUTPUT").long("output").short("o").takes_value(true)
+             .help("Output PDF file name (default chords.pdf)"))
+        .arg(Arg::with_name("TITLE").long("title").takes_value(true)
+             .help("Title (in metadata) of the output PDF file"))
+        .arg(Arg::with_name("AUTHOR").long("author").takes_value(true)
+             .help("Author (in metadata) of the output PDF file"))
+        .arg(Arg::with_name("SOURCENAMES").long("sourcenames")
+             .help("Show name of chopro source file on page"))
+        .arg(Arg::with_name("INPUT").required(true).multiple(true)
+             .help("Chopro file(s) to parse"))
+        .get_matches();
 
     let filename = args.value_of("OUTPUT").unwrap_or("chords.pdf");
     let mut document = Pdf::create(filename).map_err(|err| {
