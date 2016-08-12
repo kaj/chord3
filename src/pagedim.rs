@@ -2,7 +2,7 @@
 pub struct PageDim {
     width: f32,
     height: f32,
-    pageno: u32
+    pageno: u32,
 }
 
 impl PageDim {
@@ -10,14 +10,14 @@ impl PageDim {
         PageDim {
             width: 596.0,
             height: 842.0,
-            pageno: pageno
+            pageno: pageno,
         }
     }
     pub fn next(&self) -> PageDim {
         PageDim {
             width: self.width,
             height: self.height,
-            pageno: self.pageno + 1
+            pageno: self.pageno + 1,
         }
     }
     pub fn is_left(&self) -> bool {
@@ -36,10 +36,18 @@ impl PageDim {
         self.pageno
     }
     pub fn left(&self) -> f32 {
-        if self.is_left() { 20.0 } else { 80.0 }
+        if self.is_left() {
+            20.0
+        } else {
+            80.0
+        }
     }
     pub fn right(&self) -> f32 {
-        if self.is_left() { self.width - 75.0 } else { self.width - 15.0 }
+        if self.is_left() {
+            self.width - 75.0
+        } else {
+            self.width - 15.0
+        }
     }
     pub fn top(&self) -> f32 {
         self.height - 20.0

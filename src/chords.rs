@@ -3,19 +3,19 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub struct ChordHolder {
     local: BTreeMap<String, Vec<i8>>,
-    used : BTreeSet<String>
+    used: BTreeSet<String>,
 }
 
 impl ChordHolder {
     pub fn new() -> ChordHolder {
         ChordHolder {
             local: BTreeMap::new(),
-            used: BTreeSet::new()
+            used: BTreeSet::new(),
         }
     }
     pub fn use_chord(&mut self, chord: &str) {
-        if !(chord == "NC" || chord == "N.C." ||
-             chord == "-" || chord == "%" || chord == "" ||
+        if !(chord == "NC" || chord == "N.C." || chord == "%" ||
+             chord == "-" || chord == "" ||
              chord.starts_with('/') || chord.starts_with('x')) {
             self.used.insert(chord.to_string());
         }
@@ -24,26 +24,29 @@ impl ChordHolder {
         self.local.insert(chord, def);
     }
     pub fn get_used(&self) -> Vec<(&str, &Vec<i8>)> {
-        self.used.iter().map(|name| {
-            if let Some(def) = self.local.get(name) {
-                (name as &str, def)
-            } else if let Some(def) = KNOWN_CHORDS.get(name) {
-                (name as &str, def)
-            } else {
-                if let Some(repl) = ChordHolder::replacement(name) {
-                    if let Some(def) = KNOWN_CHORDS.get(&repl) {
-                        (name as &str, def)
+        self.used
+            .iter()
+            .map(|name| {
+                if let Some(def) = self.local.get(name) {
+                    (name as &str, def)
+                } else if let Some(def) = KNOWN_CHORDS.get(name) {
+                    (name as &str, def)
+                } else {
+                    if let Some(repl) = ChordHolder::replacement(name) {
+                        if let Some(def) = KNOWN_CHORDS.get(&repl) {
+                            (name as &str, def)
+                        } else {
+                            println!("Warning: Unknown chord {} (and {})",
+                                     name, repl);
+                            (name as &str, &*UNKNOWN_CHORD)
+                        }
                     } else {
-                        println!("Warning: Unknown chord {} (and {})",
-                                 name, repl);
+                        println!("Warning: Unknown chord {}", name);
                         (name as &str, &*UNKNOWN_CHORD)
                     }
-                } else {
-                    println!("Warning: Unknown chord {}", name);
-                    (name as &str, &*UNKNOWN_CHORD)
                 }
-            }
-        }).collect()
+            })
+            .collect()
     }
     fn replacement(name: &str) -> Option<String> {
         if name.starts_with("H") {
@@ -54,7 +57,7 @@ impl ChordHolder {
                 "D#" => Some(format!("Eb{}", &name[2..])),
                 "Gb" => Some(format!("F#{}", &name[2..])),
                 "Cb" => Some(format!("B{}", &name[2..])),
-                _ => None
+                _ => None,
             }
         } else {
             None
@@ -67,19 +70,19 @@ fn test_simple_chord() {
     let mut test = ChordHolder::new();
     test.use_chord("Am");
     test.use_chord("E");
-    assert_eq!(vec!(("Am", &vec!(0,-1,0,2,2,1,0)),
-                    ("E", &vec!(0,0,2,2,1,0,0))),
+    assert_eq!(vec![("Am", &vec![0, -1, 0, 2, 2, 1, 0]),
+                    ("E", &vec![0, 0, 2, 2, 1, 0, 0])],
                test.get_used())
 }
 
 #[test]
 fn test_override_chord() {
     let mut test = ChordHolder::new();
-    test.define("Am".to_string(), vec!(5, 1, 3, 3, 1, 1, 1));
+    test.define("Am".to_string(), vec![5, 1, 3, 3, 1, 1, 1]);
     test.use_chord("Am");
     test.use_chord("E");
-    assert_eq!(vec!(("Am", &vec!(5,1,3,3,1,1,1)),
-                    ("E", &vec!(0,0,2,2,1,0,0))),
+    assert_eq!(vec![("Am", &vec![5, 1, 3, 3, 1, 1, 1]),
+                    ("E", &vec![0, 0, 2, 2, 1, 0, 0])],
                test.get_used())
 }
 
@@ -88,12 +91,12 @@ fn test_nochord_and_unknown() {
     let mut test = ChordHolder::new();
     test.use_chord("N.C.");
     test.use_chord("Smaj9");
-    assert_eq!(vec!(("Smaj9", &vec!(0,-2,-2,-2,-2,-2,-2))),
+    assert_eq!(vec![("Smaj9", &vec![0, -2, -2, -2, -2, -2, -2])],
                test.get_used())
 }
 
 lazy_static! {
-    static ref UNKNOWN_CHORD: Vec<i8> = { vec!(0,-2,-2,-2,-2,-2,-2) };
+    static ref UNKNOWN_CHORD: Vec<i8> = { vec![0,-2,-2,-2,-2,-2,-2] };
     static ref KNOWN_CHORDS: BTreeMap<String, Vec<i8>> = {
     let mut result = BTreeMap::new();
     {
