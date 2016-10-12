@@ -6,6 +6,7 @@ extern crate lazy_static;
 extern crate clap;
 
 use pdf::{BuiltinFont, Canvas, Pdf};
+use pdf::graphicsstate::Color;
 use regex::Regex;
 use std::fs::File;
 use std::io::BufRead;
@@ -534,7 +535,7 @@ fn render_token<'a>(token: ChordFileExpression,
                         chords.use_chord(part);
                         try!(t.gsave());
                         try!(t.set_rise(text_size * 0.9));
-                        try!(t.set_fill_gray(96));
+                        try!(t.set_fill_color(Color::gray(96)));
                         try!(t.set_font(&chordfont, chord_size));
                         let chord_width = chordfont.get_width_raw(&part) as i32;
                         try!(t.show_j(&part, chord_width));
