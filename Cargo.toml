@@ -6,9 +6,7 @@ repository = "https://github.com/kaj/chord3"
 description = "Create pdf songbooks from chopro source."
 
 [dependencies]
-regex = "*"
-lazy_static = "*"
 clap = "*"
-
-[dependencies.pdf]
-git = "https://github.com/kaj/rust-pdf.git"
+lazy_static = "*"
+pdf = "^0.5"
+regex = "*"
