@@ -538,7 +538,7 @@ fn render_token<'a>(token: ChordFileExpression,
                         try!(t.set_fill_color(Color::gray(96)));
                         try!(t.set_font(&chordfont, chord_size));
                         let chord_width = chordfont.get_width_raw(&part) as i32;
-                        try!(t.show_j(&part, chord_width));
+                        try!(t.show_adjusted(&[(&part, chord_width)]));
                         last_chord_width = (chord_width + 400) as f32 *
                                            chord_size /
                                            1000.0;
