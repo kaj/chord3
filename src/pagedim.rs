@@ -36,11 +36,7 @@ impl PageDim {
         self.pageno
     }
     pub fn left(&self) -> f32 {
-        if self.is_left() {
-            20.0
-        } else {
-            80.0
-        }
+        if self.is_left() { 20.0 } else { 80.0 }
     }
     pub fn right(&self) -> f32 {
         if self.is_left() {

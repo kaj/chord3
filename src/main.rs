@@ -5,16 +5,15 @@ extern crate regex;
 extern crate lazy_static;
 extern crate clap;
 
+use clap::{App, Arg};
 use pdf::{BuiltinFont, Canvas, Pdf};
 use pdf::graphicsstate::Color;
 use regex::Regex;
 use std::fs::File;
-use std::io::BufRead;
-use std::io;
-use std::vec::Vec;
-use std::sync::Mutex;
+use std::io::{self, BufRead};
 use std::process::exit;
-use clap::{App, Arg};
+use std::sync::Mutex;
+use std::vec::Vec;
 
 mod chords;
 use chords::ChordHolder;
@@ -88,36 +87,19 @@ fn chordbox<'a>(c: &mut Canvas<'a>,
 }
 
 enum ChordFileExpression {
-    Title {
-        s: String,
-    },
-    SubTitle {
-        s: String,
-    },
-    Comment {
-        s: String,
-    },
-    ChordDef {
-        name: String,
-        def: Vec<i8>,
-    },
-    Chorus {
-        lines: Vec<ChordFileExpression>,
-    },
+    Title { s: String },
+    SubTitle { s: String },
+    Comment { s: String },
+    ChordDef { name: String, def: Vec<i8> },
+    Chorus { lines: Vec<ChordFileExpression> },
     EndOfChorus,
-    Tab {
-        lines: Vec<String>,
-    },
+    Tab { lines: Vec<String> },
     EndOfTab,
-    StartColumns {
-        n_columns: u8,
-    },
+    StartColumns { n_columns: u8 },
     ColumnBreak,
     PageBreak,
     NewSong,
-    Line {
-        s: Vec<String>,
-    },
+    Line { s: Vec<String> },
 }
 
 struct ChoproParser<R: io::Read> {
@@ -174,7 +156,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
     fn next(&mut self) -> Option<ChordFileExpression> {
         if let Some(line) = self.nextline() {
             let re = Regex::new(r"\{(?P<cmd>\w+)(?::?\s*(?P<arg>.*))?\}")
-                         .unwrap();
+                .unwrap();
             if let Some(caps) = re.captures(&line) {
                 let arg = caps.name("arg").unwrap_or("").to_string();
                 match &*caps.name("cmd").unwrap().to_lowercase() {
@@ -186,7 +168,8 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                         => Some(ChordFileExpression::Comment{s:arg}),
                     "define" => {
                         //println!("Parse chord def '{}'", arg);
-                        let re = Regex::new(r"(?i)^([\S]+)\s+base-fret\s+([0-9]+)\s+frets(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))\s*$").unwrap();
+                        let re = Regex::new(
+                            r"(?i)^([\S]+)\s+base-fret\s+([0-9]+)\s+frets(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))\s*$").unwrap();
                         if let Some(caps) = re.captures(&arg) {
                             let s = |n| {
                                 //println!("String {} is {:?}", n,
@@ -255,7 +238,9 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                         Some(ChordFileExpression::NewSong),
                     x => {
                         println!("unknown expression {}", x);
-                        Some(ChordFileExpression::Comment{s:caps.at(0).unwrap().to_string()})
+                        Some(ChordFileExpression::Comment{
+                            s: caps.at(0).unwrap().to_string()
+                        })
                     }
                 }
             } else {
@@ -278,40 +263,38 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
 
 fn main() {
     let args = App::new("chord3")
-                   .version(env!("CARGO_PKG_VERSION"))
-                   .author("Rasmus Kaj <rasmus@krats.se>")
-                   .about("Create pdf songbooks from chopro source.")
-                   .arg(Arg::with_name("OUTPUT")
-                            .long("output")
-                            .short("o")
-                            .takes_value(true)
-                            .help("Output PDF file name (default chords.pdf)"))
-                   .arg(Arg::with_name("TITLE")
-                            .long("title")
-                            .takes_value(true)
-                            .help("Title (in metadata) of the output PDF \
-                                   file"))
-                   .arg(Arg::with_name("AUTHOR")
-                            .long("author")
-                            .takes_value(true)
-                            .help("Author (in metadata) of the output PDF \
-                                   file"))
-                   .arg(Arg::with_name("SOURCENAMES")
-                            .long("sourcenames")
-                            .help("Show name of chopro source file on page"))
-                   .arg(Arg::with_name("INPUT")
-                            .required(true)
-                            .multiple(true)
-                            .help("Chopro file(s) to parse"))
-                   .get_matches();
+        .version(env!("CARGO_PKG_VERSION"))
+        .author("Rasmus Kaj <rasmus@krats.se>")
+        .about("Create pdf songbooks from chopro source.")
+        .arg(Arg::with_name("OUTPUT")
+            .long("output")
+            .short("o")
+            .takes_value(true)
+            .help("Output PDF file name (default chords.pdf)"))
+        .arg(Arg::with_name("TITLE")
+            .long("title")
+            .takes_value(true)
+            .help("Title (in metadata) of the output PDF file"))
+        .arg(Arg::with_name("AUTHOR")
+            .long("author")
+            .takes_value(true)
+            .help("Author (in metadata) of the output PDF file"))
+        .arg(Arg::with_name("SOURCENAMES")
+            .long("sourcenames")
+            .help("Show name of chopro source file on page"))
+        .arg(Arg::with_name("INPUT")
+            .required(true)
+            .multiple(true)
+            .help("Chopro file(s) to parse"))
+        .get_matches();
 
     let filename = args.value_of("OUTPUT").unwrap_or("chords.pdf");
     let mut document = Pdf::create(filename)
-                           .map_err(|err| {
-                               println!("Failed to open {}: {}", filename, err);
-                               exit(1);
-                           })
-                           .unwrap();
+        .map_err(|err| {
+            println!("Failed to open {}: {}", filename, err);
+            exit(1);
+        })
+        .unwrap();
     document.set_title(args.value_of("TITLE").unwrap_or("Songbook"));
     if let Some(author) = args.value_of("AUTHOR") {
         document.set_author(author);
@@ -539,9 +522,8 @@ fn render_token<'a>(token: ChordFileExpression,
                         try!(t.set_font(&chordfont, chord_size));
                         let chord_width = chordfont.get_width_raw(&part) as i32;
                         try!(t.show_adjusted(&[(&part, chord_width)]));
-                        last_chord_width = (chord_width + 400) as f32 *
-                                           chord_size /
-                                           1000.0;
+                        last_chord_width =
+                            (chord_width + 400) as f32 * chord_size / 1000.0;
                         try!(t.grestore());
                     } else {
                         let part = {
@@ -555,8 +537,8 @@ fn render_token<'a>(token: ChordFileExpression,
                         if last_chord_width > text_width && i + 1 < s.len() {
                             let extra = last_chord_width - text_width;
                             let n_space = part.chars()
-                                              .filter(|&c| c == ' ')
-                                              .count();
+                                .filter(|&c| c == ' ')
+                                .count();
                             if n_space > 0 {
                                 try!(t.set_word_spacing(extra /
                                                         n_space as f32));

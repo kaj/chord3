@@ -1,5 +1,5 @@
-use std::vec::Vec;
 use std::collections::{BTreeMap, BTreeSet};
+use std::vec::Vec;
 
 pub struct ChordHolder {
     local: BTreeMap<String, Vec<i8>>,
@@ -37,7 +37,8 @@ impl ChordHolder {
                             (name as &str, def)
                         } else {
                             println!("Warning: Unknown chord {} (and {})",
-                                     name, repl);
+                                     name,
+                                     repl);
                             (name as &str, &*UNKNOWN_CHORD)
                         }
                     } else {
@@ -100,7 +101,8 @@ lazy_static! {
     static ref KNOWN_CHORDS: BTreeMap<String, Vec<i8>> = {
     let mut result = BTreeMap::new();
     {
-        let mut chord = |name: &str, base_fret: i8, e: i8, a: i8, d: i8, g: i8, b: i8, e2: i8| {
+        let mut chord = |name: &str, base_fret: i8,
+                         e: i8, a: i8, d: i8, g: i8, b: i8, e2: i8| {
             result.insert(name.to_string(), vec!(base_fret, e, a, d, g, b, e2));
         };
         let x = -1;
