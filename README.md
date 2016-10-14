@@ -8,9 +8,22 @@ files is read from standard input.  Chopro files is simply text files
 with chord names in brackets and some other options in braces, on
 separate lines.
 
-Chord3 is still in early development.  An earlier project, in another
-language with other dependencies, may be more useful:
-https://github.com/stacken/chordlab
+There is also an earlier, discontinued, project (implemented in
+python), called [ChordLab](https://github.com/stacken/chordlab).
+
+## Usage
+
+The basic usage is:
+
+```sh
+chord3 --output songs.pdf song.chopro other_song.chopro ...
+```
+
+A full list of command line flags and options is given by:
+
+```sh
+chord3 --help
+```
 
 ## License
 
