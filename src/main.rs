@@ -289,6 +289,11 @@ fn main() {
             .required_unless("CHORDS")
             .multiple(true)
             .help("Chopro file(s) to parse"))
+        .after_help("At least one INPUT file is required unless the --chords \
+                     flag is given.\n\n\
+                     Each INPUT file contains one or more song in the \
+                     chopro format, which is described at \
+                     https://github.com/kaj/chord3/blob/master/chopro.md .")
         .get_matches();
 
     let filename = args.value_of("OUTPUT").unwrap_or("chords.pdf");
