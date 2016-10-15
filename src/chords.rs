@@ -29,11 +29,11 @@ impl ChordHolder {
             .map(|name| {
                 if let Some(def) = self.local.get(name) {
                     (name as &str, def)
-                } else if let Some(def) = KNOWN_CHORDS.get(name) {
+                } else if let Some(def) = KNOWN_CHORDS.get(name as &str) {
                     (name as &str, def)
                 } else {
                     if let Some(repl) = ChordHolder::replacement(name) {
-                        if let Some(def) = KNOWN_CHORDS.get(&repl) {
+                        if let Some(def) = KNOWN_CHORDS.get(&repl as &str) {
                             (name as &str, def)
                         } else {
                             println!("Warning: Unknown chord {} (and {})",
@@ -49,6 +49,11 @@ impl ChordHolder {
             })
             .collect()
     }
+
+    pub fn get_all_chords(&self) -> Vec<(&str, &Vec<i8>)> {
+        KNOWN_CHORDS.iter().map(|(a,b)| (*a, b)).collect()
+    }
+
     fn replacement(name: &str) -> Option<String> {
         if name.starts_with("H") {
             Some(format!("B{}", &name[1..]))
@@ -98,12 +103,12 @@ fn test_nochord_and_unknown() {
 
 lazy_static! {
     static ref UNKNOWN_CHORD: Vec<i8> = { vec![0,-2,-2,-2,-2,-2,-2] };
-    static ref KNOWN_CHORDS: BTreeMap<String, Vec<i8>> = {
+    static ref KNOWN_CHORDS: BTreeMap<&'static str, Vec<i8>> = {
     let mut result = BTreeMap::new();
     {
-        let mut chord = |name: &str, base_fret: i8,
+        let mut chord = |name: &'static str, base_fret: i8,
                          e: i8, a: i8, d: i8, g: i8, b: i8, e2: i8| {
-            result.insert(name.to_string(), vec!(base_fret, e, a, d, g, b, e2));
+            result.insert(name, vec!(base_fret, e, a, d, g, b, e2));
         };
         let x = -1;
         chord("Ab",     4,   1, 3, 3, 2, 1, 1);

@@ -282,8 +282,11 @@ fn main() {
         .arg(Arg::with_name("SOURCENAMES")
             .long("sourcenames")
             .help("Show name of chopro source file on page"))
+        .arg(Arg::with_name("CHORDS")
+            .long("chords")
+            .help("Add a separate page of chord definitions"))
         .arg(Arg::with_name("INPUT")
-            .required(true)
+            .required_unless("CHORDS")
             .multiple(true)
             .help("Chopro file(s) to parse"))
         .get_matches();
@@ -306,13 +309,32 @@ fn main() {
     let show_sourcenames = args.is_present("SOURCENAMES");
 
     let mut page = PageDim::a4(1);
-    for name in args.values_of("INPUT").unwrap() {
-        match render_song(&mut document, name, show_sourcenames, page) {
-            Ok(p) => page = p.next(),
-            Err(e) => println!("Failed to handle {}: {}", name, e),
+    if let Some(inputs) = args.values_of("INPUT") {
+        for name in inputs {
+            match render_song(&mut document, name, show_sourcenames, page) {
+                Ok(p) => page = p.next(),
+                Err(e) => println!("Failed to handle {}: {}", name, e),
+            }
         }
     }
+    if args.is_present("CHORDS") {
+        render_chordlist(&mut document, page).expect("Render chordlist");
+    }
     document.finish().unwrap();
+}
+
+fn render_chordlist(document: &mut Pdf, page: PageDim)
+                    -> io::Result<()> {
+    let chords = ChordHolder::new();
+
+    document.render_page(page.width(), page.height(), |c| {
+        let s = "Chords";
+        c.add_outline(s);
+        try!(write_pageno(c, &page));
+        try!(c.left_text(page.left(), page.top() - 18.0,
+                         BuiltinFont::Times_Bold, 16.0, s));
+        render_chordboxes(c, page, chords.get_all_chords())
+    })
 }
 
 fn render_song<'a>(document: &mut Pdf,
@@ -344,19 +366,7 @@ fn render_song<'a>(document: &mut Pdf,
                                      songfilename));
                 }
             }
-            if page.is_left() {
-                try!(c.left_text(page.left(),
-                                 20.0,
-                                 BuiltinFont::Times_Italic,
-                                 12.0,
-                                 &format!("{}", page.pageno())));
-            } else {
-                try!(c.right_text(page.right(),
-                                  20.0,
-                                  BuiltinFont::Times_Italic,
-                                  12.0,
-                                  &format!("{}", page.pageno())));
-            }
+            try!(write_pageno(c, &page));
             while let Some(token) = source.next() {
                 if let ChordFileExpression::StartColumns { n_columns } = token {
                     column_top = y;
@@ -390,6 +400,17 @@ fn render_song<'a>(document: &mut Pdf,
     Ok(page)
 }
 
+fn write_pageno(c: &mut Canvas, page: &PageDim) -> io::Result<()> {
+    let font = BuiltinFont::Times_Italic;
+    let pageno = format!("{}", page.pageno());
+    if page.is_left() {
+        try!(c.left_text(page.left(), 20.0, font, 12.0, &pageno));
+    } else {
+        try!(c.right_text(page.right(), 20.0, font, 12.0, &pageno));
+    }
+    Ok(())
+}
+
 fn render_chordboxes<'a>(c: &mut Canvas<'a>,
                          page: PageDim,
                          used_chords: Vec<(&str, &Vec<i8>)>)
@@ -421,7 +442,6 @@ fn render_token<'a>(token: ChordFileExpression,
                     c: &mut Canvas<'a>,
                     chords: &mut ChordHolder)
                     -> io::Result<f32> {
-    let times_bold = c.get_font(BuiltinFont::Times_Bold);
     let times_italic = c.get_font(BuiltinFont::Times_Italic);
     let times = c.get_font(BuiltinFont::Times_Roman);
     let chordfont = c.get_font(BuiltinFont::Helvetica_Oblique);
@@ -429,13 +449,9 @@ fn render_token<'a>(token: ChordFileExpression,
     match token {
         ChordFileExpression::Title { s } => {
             c.add_outline(&s);
-            c.text(|t| {
-                let y = y - 18.0;
-                try!(t.set_font(&times_bold, 16.0));
-                try!(t.pos(left, y));
-                try!(t.show(&s));
-                Ok(y)
-            })
+            let y = y - 18.0;
+            try!(c.left_text(left, y, BuiltinFont::Times_Bold, 16.0, &s));
+            Ok(y)
         }
         ChordFileExpression::SubTitle { s } => {
             c.text(|t| {
