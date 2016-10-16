@@ -25,6 +25,24 @@ A full list of command line flags and options is given by:
 chord3 --help
 ```
 
+## Installation
+
+If you have the rust toolchain installed, you can install the latest
+release of chord3 with cargo:
+
+```sh
+cargo install chord3
+```
+
+Alternatively, if you run Fedora Linux there is
+[a copr repo for chord3](https://copr.fedorainfracloud.org/coprs/kaj/chord3/)
+which you can enable to install chord3 from a rpm:
+
+```sh
+dnf copr enable kaj/chord3
+dnf install chord3
+```
+
 ## License
 
 Rasmus Kaj <rasmus@krats.se> wrote this program. As long as you retain this
