@@ -421,10 +421,11 @@ fn render_chordboxes<'a>(c: &mut Canvas<'a>,
                          used_chords: Vec<(&str, &Vec<i8>)>)
                          -> io::Result<()> {
     let box_width = 40.0;
-    let box_height = 60.0;
+    let box_height = 62.0;
     let n_chords = used_chords.len() as u32;
     if n_chords > 0 {
         let n_aside = (page.inner_width() / box_width) as u32;
+        let box_width = (page.inner_width() + 7.0) / n_aside as f32;
         let n_height = (n_chords + n_aside - 1) / n_aside;
         let n_first = n_chords - (n_height - 1) * n_aside;
         let mut x = page.right() - n_first as f32 * box_width;
