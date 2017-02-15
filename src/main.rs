@@ -1,4 +1,4 @@
-extern crate pdf;
+extern crate pdf_canvas;
 extern crate regex;
 
 #[macro_use]
@@ -6,8 +6,8 @@ extern crate lazy_static;
 extern crate clap;
 
 use clap::{App, Arg};
-use pdf::{BuiltinFont, Canvas, Pdf};
-use pdf::graphicsstate::Color;
+use pdf_canvas::{BuiltinFont, Canvas, Pdf};
+use pdf_canvas::graphicsstate::Color;
 use regex::Regex;
 use std::fs::File;
 use std::io::{self, BufRead};

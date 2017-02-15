@@ -9,5 +9,5 @@ license = "Beerware"
 [dependencies]
 clap = "^2"
 lazy_static = "^0.2"
-pdf = "^0.5"
+pdf-canvas = "^0.5"
 regex = "^0.1"
