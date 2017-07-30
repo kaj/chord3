@@ -30,35 +30,35 @@ fn chordbox<'a>(c: &mut Canvas<'a>,
     let dy = 7.0;
     let right = left + 5.0 * dx;
     let bottom = top - 4.4 * dy;
-    try!(c.center_text(left + 2.0 * dx,
-                       top + dy,
-                       BuiltinFont::Helvetica_Oblique,
-                       12.0,
-                       name));
+    c.center_text(left + 2.0 * dx,
+                  top + dy,
+                  BuiltinFont::Helvetica_Oblique,
+                  12.0,
+                  name)?;
     let barre = strings[0];
     let up = if barre < 2 {
-        try!(c.set_line_width(1.0));
-        try!(c.line(left - 0.15, top + 0.5, right + 0.15, top + 0.5));
-        try!(c.stroke());
+        c.set_line_width(1.0)?;
+        c.line(left - 0.15, top + 0.5, right + 0.15, top + 0.5)?;
+        c.stroke()?;
         0.0
     } else {
-        try!(c.right_text(left - 0.4 * dx,
-                          top - 0.9 * dy,
-                          BuiltinFont::Helvetica,
-                          dy,
-                          &format!("{}", barre)));
+        c.right_text(left - 0.4 * dx,
+                     top - 0.9 * dy,
+                     BuiltinFont::Helvetica,
+                     dy,
+                     &format!("{}", barre))?;
         1.6
     };
-    try!(c.set_line_width(0.3));
+    c.set_line_width(0.3)?;
     for b in 0..5 {
         let y = top - b as f32 * dy;
-        try!(c.line(left, y, right, y));
+        c.line(left, y, right, y)?;
     }
     for s in 0..6 {
         let x = left + s as f32 * dx;
-        try!(c.line(x, top + up, x, bottom));
+        c.line(x, top + up, x, bottom)?;
     }
-    try!(c.stroke());
+    c.stroke()?;
     let radius = 1.4;
     let above = top + 2.0 + radius;
     for s in 0..6 {
@@ -68,18 +68,18 @@ fn chordbox<'a>(c: &mut Canvas<'a>,
             -1 => {
                 let (l, r) = (x - radius, x + radius);
                 let (t, b) = (above - radius, above + radius);
-                try!(c.line(l, t, r, b));
-                try!(c.line(r, t, l, b));
-                try!(c.stroke());
+                c.line(l, t, r, b)?;
+                c.line(r, t, l, b)?;
+                c.stroke()?;
             }
             0 => {
-                try!(c.circle(x, above, radius));
-                try!(c.stroke());
+                c.circle(x, above, radius)?;
+                c.stroke()?;
             }
             y => {
                 let y = top - (y as f32 - 0.5) * dy;
-                try!(c.circle(x, y, radius + 0.4));
-                try!(c.fill());
+                c.circle(x, y, radius + 0.4)?;
+                c.fill()?;
             }
         }
     }
@@ -109,7 +109,7 @@ struct ChoproParser<R: io::Read> {
 
 impl ChoproParser<File> {
     fn open(path: &str) -> io::Result<ChoproParser<File>> {
-        let f = try!(File::open(path));
+        let f = File::open(path)?;
         Ok(ChoproParser::new(f))
     }
 }
@@ -335,9 +335,9 @@ fn render_chordlist(document: &mut Pdf, page: PageDim)
     document.render_page(page.width(), page.height(), |c| {
         let s = "Chords";
         c.add_outline(s);
-        try!(write_pageno(c, &page));
-        try!(c.left_text(page.left(), page.top() - 18.0,
-                         BuiltinFont::Times_Bold, 16.0, s));
+        write_pageno(c, &page)?;
+        c.left_text(page.left(), page.top() - 18.0,
+                    BuiltinFont::Times_Bold, 16.0, s)?;
         render_chordboxes(c, page, chords.get_all_chords())
     })
 }
@@ -347,39 +347,39 @@ fn render_song<'a>(document: &mut Pdf,
                    show_sourcename: bool,
                    page: PageDim)
                    -> io::Result<PageDim> {
-    let mut source = try!(ChoproParser::open(&songfilename));
+    let mut source = ChoproParser::open(&songfilename)?;
     let mut chords = ChordHolder::new();
     let mut page = page;
     let mut column_top = page.top();
     let mut left = page.left();
     let mut n_cols = 1;
     while !source.is_eof() {
-        try!(document.render_page(page.width(), page.height(), |c| {
+        document.render_page(page.width(), page.height(), |c| {
             let mut y = page.top();
             if show_sourcename {
                 if page.is_left() {
-                    try!(c.right_text(page.right(),
-                                      20.0,
-                                      BuiltinFont::Helvetica_Oblique,
-                                      10.0,
-                                      songfilename));
+                    c.right_text(page.right(),
+                                 20.0,
+                                 BuiltinFont::Helvetica_Oblique,
+                                 10.0,
+                                 songfilename)?;
                 } else {
-                    try!(c.left_text(page.left(),
-                                     20.0,
-                                     BuiltinFont::Helvetica_Oblique,
-                                     10.0,
-                                     songfilename));
+                    c.left_text(page.left(),
+                                20.0,
+                                BuiltinFont::Helvetica_Oblique,
+                                10.0,
+                                songfilename)?;
                 }
             }
-            try!(write_pageno(c, &page));
+            write_pageno(c, &page)?;
             while let Some(token) = source.next() {
                 if let ChordFileExpression::StartColumns { n_columns } = token {
                     column_top = y;
                     n_cols = n_columns;
                 } else {
-                    y = try!(render_token(token, y, left, c, &mut chords));
+                    y = render_token(token, y, left, c, &mut chords)?;
                     if y == std::f32::NEG_INFINITY {
-                        try!(render_chordboxes(c, page, chords.get_used()));
+                        render_chordboxes(c, page, chords.get_used())?;
                         n_cols = 1;
                         chords = ChordHolder::new();
                         page = page.next();
@@ -398,9 +398,9 @@ fn render_song<'a>(document: &mut Pdf,
                     }
                 }
             }
-            try!(render_chordboxes(c, page, chords.get_used()));
+            render_chordboxes(c, page, chords.get_used())?;
             Ok(())
-        }));
+        })?;
     }
     Ok(page)
 }
@@ -409,9 +409,9 @@ fn write_pageno(c: &mut Canvas, page: &PageDim) -> io::Result<()> {
     let font = BuiltinFont::Times_Italic;
     let pageno = format!("{}", page.pageno());
     if page.is_left() {
-        try!(c.left_text(page.left(), 20.0, font, 12.0, &pageno));
+        c.left_text(page.left(), 20.0, font, 12.0, &pageno)?;
     } else {
-        try!(c.right_text(page.right(), 20.0, font, 12.0, &pageno));
+        c.right_text(page.right(), 20.0, font, 12.0, &pageno)?;
     }
     Ok(())
 }
@@ -431,7 +431,7 @@ fn render_chordboxes<'a>(c: &mut Canvas<'a>,
         let mut x = page.right() - n_first as f32 * box_width;
         let mut y = 10.0 + n_height as f32 * box_height;
         for (chord, chorddef) in used_chords {
-            try!(chordbox(c, x + 15.0, y, chord, chorddef));
+            chordbox(c, x + 15.0, y, chord, chorddef)?;
             x = x + box_width;
             if x >= page.right() {
                 x = page.right() - n_aside as f32 * box_width;
@@ -456,24 +456,24 @@ fn render_token<'a>(token: ChordFileExpression,
         ChordFileExpression::Title { s } => {
             c.add_outline(&s);
             let y = y - 18.0;
-            try!(c.left_text(left, y, BuiltinFont::Times_Bold, 16.0, &s));
+            c.left_text(left, y, BuiltinFont::Times_Bold, 16.0, &s)?;
             Ok(y)
         }
         ChordFileExpression::SubTitle { s } => {
             c.text(|t| {
                 let y = y - 16.0;
-                try!(t.set_font(&times_italic, 14.0));
-                try!(t.pos(left, y));
-                try!(t.show(&s));
+                t.set_font(&times_italic, 14.0)?;
+                t.pos(left, y)?;
+                t.show(&s)?;
                 Ok(y)
             })
         }
         ChordFileExpression::Comment { s } => {
             c.text(|t| {
                 let y = y - 12.0;
-                try!(t.set_font(&times_italic, 12.0));
-                try!(t.pos(left, y));
-                try!(t.show(&s));
+                t.set_font(&times_italic, 12.0)?;
+                t.pos(left, y)?;
+                t.show(&s)?;
                 Ok(y)
             })
         }
@@ -484,12 +484,12 @@ fn render_token<'a>(token: ChordFileExpression,
         ChordFileExpression::Chorus { lines } => {
             let mut y2 = y;
             for line in lines {
-                y2 = try!(render_token(line, y2, left + 10.0, c, chords));
+                y2 = render_token(line, y2, left + 10.0, c, chords)?;
             }
             y2 = y2 - 4.0;
-            try!(c.set_line_width(0.5));
-            try!(c.line(left - 6.0, y, left - 6.0, y2));
-            try!(c.stroke());
+            c.set_line_width(0.5)?;
+            c.line(left - 6.0, y, left - 6.0, y2)?;
+            c.stroke()?;
             Ok(y2)
         }
         ChordFileExpression::EndOfChorus => {
@@ -499,12 +499,12 @@ fn render_token<'a>(token: ChordFileExpression,
         ChordFileExpression::Tab { lines } => {
             c.text(|t| {
                 let mut y = y;
-                try!(t.pos(left, y));
-                try!(t.set_font(&tabfont, 10.0));
-                try!(t.set_leading(10.0));
+                t.pos(left, y)?;
+                t.set_font(&tabfont, 10.0)?;
+                t.set_leading(10.0)?;
                 for line in lines {
                     y -= 10.0;
-                    try!(t.show_line(&line));
+                    t.show_line(&line)?;
                 }
                 Ok(y)
             })
@@ -532,21 +532,21 @@ fn render_token<'a>(token: ChordFileExpression,
                 } else {
                     text_size + chord_size
                 });
-                try!(t.set_font(&times, text_size));
-                try!(t.pos(left, y));
+                t.set_font(&times, text_size)?;
+                t.pos(left, y)?;
                 let mut last_chord_width = 0.0;
                 for (i, part) in s.iter().enumerate() {
                     if i % 2 == 1 {
                         chords.use_chord(part);
-                        try!(t.gsave());
-                        try!(t.set_rise(text_size * 0.9));
-                        try!(t.set_fill_color(Color::gray(96)));
-                        try!(t.set_font(&chordfont, chord_size));
+                        t.gsave()?;
+                        t.set_rise(text_size * 0.9)?;
+                        t.set_fill_color(Color::gray(96))?;
+                        t.set_font(&chordfont, chord_size)?;
                         let chord_width = chordfont.get_width_raw(&part) as i32;
-                        try!(t.show_adjusted(&[(&part, chord_width)]));
+                        t.show_adjusted(&[(&part, chord_width)])?;
                         last_chord_width =
                             (chord_width + 400) as f32 * chord_size / 1000.0;
-                        try!(t.grestore());
+                        t.grestore()?;
                     } else {
                         let part = {
                             if part.len() > 0 {
@@ -562,17 +562,15 @@ fn render_token<'a>(token: ChordFileExpression,
                                 .filter(|&c| c == ' ')
                                 .count();
                             if n_space > 0 {
-                                try!(t.set_word_spacing(extra /
-                                                        n_space as f32));
+                                t.set_word_spacing(extra / n_space as f32)?;
                             } else {
-                                try!(t.set_char_spacing(extra /
-                                                        part.len() as f32));
+                                t.set_char_spacing(extra / part.len() as f32)?;
                             }
                         }
-                        try!(t.show(&part));
+                        t.show(&part)?;
                         if last_chord_width > text_width {
-                            try!(t.set_char_spacing(0.0));
-                            try!(t.set_word_spacing(0.0));
+                            t.set_char_spacing(0.0)?;
+                            t.set_word_spacing(0.0)?;
                         }
                     }
                 }
