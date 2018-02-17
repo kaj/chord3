@@ -1,6 +1,6 @@
 [package]
 name = "chord3"
-version = "0.3.0"
+version = "0.3.1-PRE"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 repository = "https://github.com/kaj/chord3"
 description = "Create pdf songbooks from chopro source."

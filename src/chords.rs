@@ -14,9 +14,10 @@ impl ChordHolder {
         }
     }
     pub fn use_chord(&mut self, chord: &str) {
-        if !(chord == "NC" || chord == "N.C." || chord == "%" ||
-             chord == "-" || chord == "" ||
-             chord.starts_with('/') || chord.starts_with('x')) {
+        if !(chord == "NC" || chord == "N.C." || chord == "%" || chord == "-"
+            || chord == "" || chord.starts_with('/')
+            || chord.starts_with('x'))
+        {
             self.used.insert(chord.to_string());
         }
     }
@@ -36,9 +37,10 @@ impl ChordHolder {
                         if let Some(def) = KNOWN_CHORDS.get(&repl as &str) {
                             (name as &str, def)
                         } else {
-                            println!("Warning: Unknown chord {} (and {})",
-                                     name,
-                                     repl);
+                            println!(
+                                "Warning: Unknown chord {} (and {})",
+                                name, repl
+                            );
                             (name as &str, &*UNKNOWN_CHORD)
                         }
                     } else {
@@ -51,7 +53,7 @@ impl ChordHolder {
     }
 
     pub fn get_all_chords(&self) -> Vec<(&str, &Vec<i8>)> {
-        KNOWN_CHORDS.iter().map(|(a,b)| (*a, b)).collect()
+        KNOWN_CHORDS.iter().map(|(a, b)| (*a, b)).collect()
     }
 
     fn replacement(name: &str) -> Option<String> {
@@ -76,9 +78,13 @@ fn test_simple_chord() {
     let mut test = ChordHolder::new();
     test.use_chord("Am");
     test.use_chord("E");
-    assert_eq!(vec![("Am", &vec![0, -1, 0, 2, 2, 1, 0]),
-                    ("E", &vec![0, 0, 2, 2, 1, 0, 0])],
-               test.get_used())
+    assert_eq!(
+        vec![
+            ("Am", &vec![0, -1, 0, 2, 2, 1, 0]),
+            ("E", &vec![0, 0, 2, 2, 1, 0, 0]),
+        ],
+        test.get_used()
+    )
 }
 
 #[test]
@@ -87,9 +93,13 @@ fn test_override_chord() {
     test.define("Am".to_string(), vec![5, 1, 3, 3, 1, 1, 1]);
     test.use_chord("Am");
     test.use_chord("E");
-    assert_eq!(vec![("Am", &vec![5, 1, 3, 3, 1, 1, 1]),
-                    ("E", &vec![0, 0, 2, 2, 1, 0, 0])],
-               test.get_used())
+    assert_eq!(
+        vec![
+            ("Am", &vec![5, 1, 3, 3, 1, 1, 1]),
+            ("E", &vec![0, 0, 2, 2, 1, 0, 0]),
+        ],
+        test.get_used()
+    )
 }
 
 #[test]
@@ -97,8 +107,10 @@ fn test_nochord_and_unknown() {
     let mut test = ChordHolder::new();
     test.use_chord("N.C.");
     test.use_chord("Smaj9");
-    assert_eq!(vec![("Smaj9", &vec![0, -2, -2, -2, -2, -2, -2])],
-               test.get_used())
+    assert_eq!(
+        vec![("Smaj9", &vec![0, -2, -2, -2, -2, -2, -2])],
+        test.get_used()
+    )
 }
 
 lazy_static! {

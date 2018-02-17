@@ -1,9 +1,9 @@
 extern crate pdf_canvas;
 extern crate regex;
 
+extern crate clap;
 #[macro_use]
 extern crate lazy_static;
-extern crate clap;
 
 use clap::{App, Arg};
 use pdf_canvas::{BuiltinFont, Canvas, Pdf};
@@ -20,21 +20,24 @@ use chords::ChordHolder;
 mod pagedim;
 use pagedim::PageDim;
 
-fn chordbox<'a>(c: &mut Canvas<'a>,
-                left: f32,
-                top: f32,
-                name: &str,
-                strings: &Vec<i8>)
-                -> io::Result<()> {
+fn chordbox<'a>(
+    c: &mut Canvas<'a>,
+    left: f32,
+    top: f32,
+    name: &str,
+    strings: &Vec<i8>,
+) -> io::Result<()> {
     let dx = 5.0;
     let dy = 7.0;
     let right = left + 5.0 * dx;
     let bottom = top - 4.4 * dy;
-    c.center_text(left + 2.0 * dx,
-                  top + dy,
-                  BuiltinFont::Helvetica_Oblique,
-                  12.0,
-                  name)?;
+    c.center_text(
+        left + 2.0 * dx,
+        top + dy,
+        BuiltinFont::Helvetica_Oblique,
+        12.0,
+        name,
+    )?;
     let barre = strings[0];
     let up = if barre < 2 {
         c.set_line_width(1.0)?;
@@ -42,11 +45,13 @@ fn chordbox<'a>(c: &mut Canvas<'a>,
         c.stroke()?;
         0.0
     } else {
-        c.right_text(left - 0.4 * dx,
-                     top - 0.9 * dy,
-                     BuiltinFont::Helvetica,
-                     dy,
-                     &format!("{}", barre))?;
+        c.right_text(
+            left - 0.4 * dx,
+            top - 0.9 * dy,
+            BuiltinFont::Helvetica,
+            dy,
+            &format!("{}", barre),
+        )?;
         1.6
     };
     c.set_line_width(0.3)?;
@@ -155,8 +160,8 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
 
     fn next(&mut self) -> Option<ChordFileExpression> {
         if let Some(line) = self.nextline() {
-            let re = Regex::new(r"\{(?P<cmd>\w+)(?::?\s*(?P<arg>.*))?\}")
-                .unwrap();
+            let re =
+                Regex::new(r"\{(?P<cmd>\w+)(?::?\s*(?P<arg>.*))?\}").unwrap();
             if let Some(caps) = re.captures(&line) {
                 let arg = caps.name("arg").unwrap_or("").to_string();
                 match &*caps.name("cmd").unwrap().to_lowercase() {
@@ -260,40 +265,53 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
     }
 }
 
-
 fn main() {
     let args = App::new("chord3")
         .version(env!("CARGO_PKG_VERSION"))
         .author("Rasmus Kaj <rasmus@krats.se>")
         .about("Create pdf songbooks from chopro source.")
-        .arg(Arg::with_name("OUTPUT")
-            .long("output")
-            .short("o")
-            .takes_value(true)
-            .help("Output PDF file name (default chords.pdf)"))
-        .arg(Arg::with_name("TITLE")
-            .long("title")
-            .takes_value(true)
-            .help("Title (in metadata) of the output PDF file"))
-        .arg(Arg::with_name("AUTHOR")
-            .long("author")
-            .takes_value(true)
-            .help("Author (in metadata) of the output PDF file"))
-        .arg(Arg::with_name("SOURCENAMES")
-            .long("sourcenames")
-            .help("Show name of chopro source file on page"))
-        .arg(Arg::with_name("CHORDS")
-            .long("chords")
-            .help("Add a separate page of chord definitions"))
-        .arg(Arg::with_name("INPUT")
-            .required_unless("CHORDS")
-            .multiple(true)
-            .help("Chopro file(s) to parse"))
-        .after_help("At least one INPUT file is required unless the --chords \
-                     flag is given.\n\n\
-                     Each INPUT file contains one or more song in the \
-                     chopro format, which is described at \
-                     https://github.com/kaj/chord3/blob/master/chopro.md .")
+        .arg(
+            Arg::with_name("OUTPUT")
+                .long("output")
+                .short("o")
+                .takes_value(true)
+                .help("Output PDF file name (default chords.pdf)"),
+        )
+        .arg(
+            Arg::with_name("TITLE")
+                .long("title")
+                .takes_value(true)
+                .help("Title (in metadata) of the output PDF file"),
+        )
+        .arg(
+            Arg::with_name("AUTHOR")
+                .long("author")
+                .takes_value(true)
+                .help("Author (in metadata) of the output PDF file"),
+        )
+        .arg(
+            Arg::with_name("SOURCENAMES")
+                .long("sourcenames")
+                .help("Show name of chopro source file on page"),
+        )
+        .arg(
+            Arg::with_name("CHORDS")
+                .long("chords")
+                .help("Add a separate page of chord definitions"),
+        )
+        .arg(
+            Arg::with_name("INPUT")
+                .required_unless("CHORDS")
+                .multiple(true)
+                .help("Chopro file(s) to parse"),
+        )
+        .after_help(
+            "At least one INPUT file is required unless the --chords \
+             flag is given.\n\n\
+             Each INPUT file contains one or more song in the \
+             chopro format, which is described at \
+             https://github.com/kaj/chord3/blob/master/chopro.md .",
+        )
         .get_matches();
 
     let filename = args.value_of("OUTPUT").unwrap_or("chords.pdf");
@@ -307,9 +325,11 @@ fn main() {
     if let Some(author) = args.value_of("AUTHOR") {
         document.set_author(author);
     }
-    document.set_producer(concat!("chord3 version ",
-                                  env!("CARGO_PKG_VERSION"),
-                                  "\nhttps://github.com/kaj/chord3"));
+    document.set_producer(concat!(
+        "chord3 version ",
+        env!("CARGO_PKG_VERSION"),
+        "\nhttps://github.com/kaj/chord3"
+    ));
 
     let show_sourcenames = args.is_present("SOURCENAMES");
 
@@ -328,25 +348,30 @@ fn main() {
     document.finish().unwrap();
 }
 
-fn render_chordlist(document: &mut Pdf, page: PageDim)
-                    -> io::Result<()> {
+fn render_chordlist(document: &mut Pdf, page: PageDim) -> io::Result<()> {
     let chords = ChordHolder::new();
 
     document.render_page(page.width(), page.height(), |c| {
         let s = "Chords";
         c.add_outline(s);
         write_pageno(c, &page)?;
-        c.left_text(page.left(), page.top() - 18.0,
-                    BuiltinFont::Times_Bold, 16.0, s)?;
+        c.left_text(
+            page.left(),
+            page.top() - 18.0,
+            BuiltinFont::Times_Bold,
+            16.0,
+            s,
+        )?;
         render_chordboxes(c, page, chords.get_all_chords())
     })
 }
 
-fn render_song<'a>(document: &mut Pdf,
-                   songfilename: &str,
-                   show_sourcename: bool,
-                   page: PageDim)
-                   -> io::Result<PageDim> {
+fn render_song<'a>(
+    document: &mut Pdf,
+    songfilename: &str,
+    show_sourcename: bool,
+    page: PageDim,
+) -> io::Result<PageDim> {
     let mut source = ChoproParser::open(&songfilename)?;
     let mut chords = ChordHolder::new();
     let mut page = page;
@@ -358,17 +383,21 @@ fn render_song<'a>(document: &mut Pdf,
             let mut y = page.top();
             if show_sourcename {
                 if page.is_left() {
-                    c.right_text(page.right(),
-                                 20.0,
-                                 BuiltinFont::Helvetica_Oblique,
-                                 10.0,
-                                 songfilename)?;
+                    c.right_text(
+                        page.right(),
+                        20.0,
+                        BuiltinFont::Helvetica_Oblique,
+                        10.0,
+                        songfilename,
+                    )?;
                 } else {
-                    c.left_text(page.left(),
-                                20.0,
-                                BuiltinFont::Helvetica_Oblique,
-                                10.0,
-                                songfilename)?;
+                    c.left_text(
+                        page.left(),
+                        20.0,
+                        BuiltinFont::Helvetica_Oblique,
+                        10.0,
+                        songfilename,
+                    )?;
                 }
             }
             write_pageno(c, &page)?;
@@ -416,10 +445,11 @@ fn write_pageno(c: &mut Canvas, page: &PageDim) -> io::Result<()> {
     Ok(())
 }
 
-fn render_chordboxes<'a>(c: &mut Canvas<'a>,
-                         page: PageDim,
-                         used_chords: Vec<(&str, &Vec<i8>)>)
-                         -> io::Result<()> {
+fn render_chordboxes<'a>(
+    c: &mut Canvas<'a>,
+    page: PageDim,
+    used_chords: Vec<(&str, &Vec<i8>)>,
+) -> io::Result<()> {
     let box_width = 40.0;
     let box_height = 62.0;
     let n_chords = used_chords.len() as u32;
@@ -442,12 +472,13 @@ fn render_chordboxes<'a>(c: &mut Canvas<'a>,
     Ok(())
 }
 
-fn render_token<'a>(token: ChordFileExpression,
-                    y: f32,
-                    left: f32,
-                    c: &mut Canvas<'a>,
-                    chords: &mut ChordHolder)
-                    -> io::Result<f32> {
+fn render_token<'a>(
+    token: ChordFileExpression,
+    y: f32,
+    left: f32,
+    c: &mut Canvas<'a>,
+    chords: &mut ChordHolder,
+) -> io::Result<f32> {
     let times_italic = c.get_font(BuiltinFont::Times_Italic);
     let times = c.get_font(BuiltinFont::Times_Roman);
     let chordfont = c.get_font(BuiltinFont::Helvetica_Oblique);
@@ -459,24 +490,20 @@ fn render_token<'a>(token: ChordFileExpression,
             c.left_text(left, y, BuiltinFont::Times_Bold, 16.0, &s)?;
             Ok(y)
         }
-        ChordFileExpression::SubTitle { s } => {
-            c.text(|t| {
-                let y = y - 16.0;
-                t.set_font(&times_italic, 14.0)?;
-                t.pos(left, y)?;
-                t.show(&s)?;
-                Ok(y)
-            })
-        }
-        ChordFileExpression::Comment { s } => {
-            c.text(|t| {
-                let y = y - 12.0;
-                t.set_font(&times_italic, 12.0)?;
-                t.pos(left, y)?;
-                t.show(&s)?;
-                Ok(y)
-            })
-        }
+        ChordFileExpression::SubTitle { s } => c.text(|t| {
+            let y = y - 16.0;
+            t.set_font(&times_italic, 14.0)?;
+            t.pos(left, y)?;
+            t.show(&s)?;
+            Ok(y)
+        }),
+        ChordFileExpression::Comment { s } => c.text(|t| {
+            let y = y - 12.0;
+            t.set_font(&times_italic, 12.0)?;
+            t.pos(left, y)?;
+            t.show(&s)?;
+            Ok(y)
+        }),
         ChordFileExpression::ChordDef { name, def } => {
             chords.define(name, def);
             Ok(y)
@@ -496,86 +523,81 @@ fn render_token<'a>(token: ChordFileExpression,
             println!("Warning: Stray end of chorus in song!");
             Ok(y)
         }
-        ChordFileExpression::Tab { lines } => {
-            c.text(|t| {
-                let mut y = y;
-                t.pos(left, y)?;
-                t.set_font(&tabfont, 10.0)?;
-                t.set_leading(10.0)?;
-                for line in lines {
-                    y -= 10.0;
-                    t.show_line(&line)?;
-                }
-                Ok(y)
-            })
-        }
+        ChordFileExpression::Tab { lines } => c.text(|t| {
+            let mut y = y;
+            t.pos(left, y)?;
+            t.set_font(&tabfont, 10.0)?;
+            t.set_leading(10.0)?;
+            for line in lines {
+                y -= 10.0;
+                t.show_line(&line)?;
+            }
+            Ok(y)
+        }),
         ChordFileExpression::EndOfTab => {
             println!("Warning: Stray end of tab in song!");
             Ok(y)
         }
         ChordFileExpression::StartColumns { n_columns } => {
-            println!("Warning: StartColumns({}) should be handled earlier",
-                     n_columns);
+            println!(
+                "Warning: StartColumns({}) should be handled earlier",
+                n_columns
+            );
             Ok(y)
         }
         ChordFileExpression::ColumnBreak => Ok(0.0),
         ChordFileExpression::PageBreak => Ok(0.0),
         ChordFileExpression::NewSong => Ok(std::f32::NEG_INFINITY),
-        ChordFileExpression::Line { s } => {
-            c.text(|t| {
-                let text_size = 12.0;
-                let chord_size = 9.0;
-                let y = y -
-                        1.1 *
-                        (if s.len() == 1 {
-                    text_size
+        ChordFileExpression::Line { s } => c.text(|t| {
+            let text_size = 12.0;
+            let chord_size = 9.0;
+            let y = y - 1.1 * (if s.len() == 1 {
+                text_size
+            } else {
+                text_size + chord_size
+            });
+            t.set_font(&times, text_size)?;
+            t.pos(left, y)?;
+            let mut last_chord_width = 0.0;
+            for (i, part) in s.iter().enumerate() {
+                if i % 2 == 1 {
+                    chords.use_chord(part);
+                    t.gsave()?;
+                    t.set_rise(text_size * 0.9)?;
+                    t.set_fill_color(Color::gray(96))?;
+                    t.set_font(&chordfont, chord_size)?;
+                    let chord_width = chordfont.get_width_raw(&part) as i32;
+                    t.show_adjusted(&[(&part, chord_width)])?;
+                    last_chord_width =
+                        (chord_width + 400) as f32 * chord_size / 1000.0;
+                    t.grestore()?;
                 } else {
-                    text_size + chord_size
-                });
-                t.set_font(&times, text_size)?;
-                t.pos(left, y)?;
-                let mut last_chord_width = 0.0;
-                for (i, part) in s.iter().enumerate() {
-                    if i % 2 == 1 {
-                        chords.use_chord(part);
-                        t.gsave()?;
-                        t.set_rise(text_size * 0.9)?;
-                        t.set_fill_color(Color::gray(96))?;
-                        t.set_font(&chordfont, chord_size)?;
-                        let chord_width = chordfont.get_width_raw(&part) as i32;
-                        t.show_adjusted(&[(&part, chord_width)])?;
-                        last_chord_width =
-                            (chord_width + 400) as f32 * chord_size / 1000.0;
-                        t.grestore()?;
-                    } else {
-                        let part = {
-                            if part.len() > 0 {
-                                part.to_string()
-                            } else {
-                                " ".to_string()
-                            }
-                        };
-                        let text_width = times.get_width(text_size, &part);
-                        if last_chord_width > text_width && i + 1 < s.len() {
-                            let extra = last_chord_width - text_width;
-                            let n_space = part.chars()
-                                .filter(|&c| c == ' ')
-                                .count();
-                            if n_space > 0 {
-                                t.set_word_spacing(extra / n_space as f32)?;
-                            } else {
-                                t.set_char_spacing(extra / part.len() as f32)?;
-                            }
+                    let part = {
+                        if part.len() > 0 {
+                            part.to_string()
+                        } else {
+                            " ".to_string()
                         }
-                        t.show(&part)?;
-                        if last_chord_width > text_width {
-                            t.set_char_spacing(0.0)?;
-                            t.set_word_spacing(0.0)?;
+                    };
+                    let text_width = times.get_width(text_size, &part);
+                    if last_chord_width > text_width && i + 1 < s.len() {
+                        let extra = last_chord_width - text_width;
+                        let n_space =
+                            part.chars().filter(|&c| c == ' ').count();
+                        if n_space > 0 {
+                            t.set_word_spacing(extra / n_space as f32)?;
+                        } else {
+                            t.set_char_spacing(extra / part.len() as f32)?;
                         }
                     }
+                    t.show(&part)?;
+                    if last_chord_width > text_width {
+                        t.set_char_spacing(0.0)?;
+                        t.set_word_spacing(0.0)?;
+                    }
                 }
-                Ok(y)
-            })
-        }
+            }
+            Ok(y)
+        }),
     }
 }
