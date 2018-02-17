@@ -28,26 +28,21 @@ impl ChordHolder {
         self.used
             .iter()
             .map(|name| {
-                if let Some(def) = self.local.get(name) {
-                    (name as &str, def)
-                } else if let Some(def) = KNOWN_CHORDS.get(name as &str) {
-                    (name as &str, def)
-                } else {
-                    if let Some(repl) = ChordHolder::replacement(name) {
-                        if let Some(def) = KNOWN_CHORDS.get(&repl as &str) {
-                            (name as &str, def)
-                        } else {
-                            println!(
-                                "Warning: Unknown chord {} (and {})",
-                                name, repl
-                            );
-                            (name as &str, &*UNKNOWN_CHORD)
-                        }
-                    } else {
-                        println!("Warning: Unknown chord {}", name);
-                        (name as &str, &*UNKNOWN_CHORD)
-                    }
-                }
+                (
+                    name as &str,
+                    self.local
+                        .get(name)
+                        .or_else(|| KNOWN_CHORDS.get(name as &str))
+                        .or_else(|| {
+                            ChordHolder::replacement(name).and_then(|repl| {
+                                KNOWN_CHORDS.get(&repl as &str)
+                            })
+                        })
+                        .unwrap_or_else(|| {
+                            println!("Warning: Unknown chord {}", name);
+                            &*UNKNOWN_CHORD
+                        }),
+                )
             })
             .collect()
     }
@@ -57,7 +52,7 @@ impl ChordHolder {
     }
 
     fn replacement(name: &str) -> Option<String> {
-        if name.starts_with("H") {
+        if name.starts_with('H') {
             Some(format!("B{}", &name[1..]))
         } else if name.len() >= 2 {
             match &name[..2] {

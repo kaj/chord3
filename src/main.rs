@@ -25,7 +25,7 @@ fn chordbox<'a>(
     left: f32,
     top: f32,
     name: &str,
-    strings: &Vec<i8>,
+    strings: &[i8],
 ) -> io::Result<()> {
     let dx = 5.0;
     let dy = 7.0;
@@ -82,7 +82,7 @@ fn chordbox<'a>(
                 c.stroke()?;
             }
             y => {
-                let y = top - (y as f32 - 0.5) * dy;
+                let y = top - (f32::from(y) - 0.5) * dy;
                 c.circle(x, y, radius + 0.4)?;
                 c.fill()?;
             }
@@ -366,13 +366,13 @@ fn render_chordlist(document: &mut Pdf, page: PageDim) -> io::Result<()> {
     })
 }
 
-fn render_song<'a>(
+fn render_song(
     document: &mut Pdf,
     songfilename: &str,
     show_sourcename: bool,
     page: PageDim,
 ) -> io::Result<PageDim> {
-    let mut source = ChoproParser::open(&songfilename)?;
+    let mut source = ChoproParser::open(songfilename)?;
     let mut chords = ChordHolder::new();
     let mut page = page;
     let mut column_top = page.top();
@@ -416,7 +416,7 @@ fn render_song<'a>(
                         return Ok(());
                     }
                     if y < 50.0 {
-                        left += page.inner_width() / n_cols as f32 + 10.0;
+                        left += page.inner_width() / f32::from(n_cols) + 10.0;
                         if left < page.right() {
                             y = column_top;
                         } else {
@@ -462,10 +462,10 @@ fn render_chordboxes<'a>(
         let mut y = 10.0 + n_height as f32 * box_height;
         for (chord, chorddef) in used_chords {
             chordbox(c, x + 15.0, y, chord, chorddef)?;
-            x = x + box_width;
+            x += box_width;
             if x >= page.right() {
                 x = page.right() - n_aside as f32 * box_width;
-                y = y - box_height;
+                y -= box_height;
             }
         }
     }
@@ -513,7 +513,7 @@ fn render_token<'a>(
             for line in lines {
                 y2 = render_token(line, y2, left + 10.0, c, chords)?;
             }
-            y2 = y2 - 4.0;
+            y2 -= 4.0;
             c.set_line_width(0.5)?;
             c.line(left - 6.0, y, left - 6.0, y2)?;
             c.stroke()?;
@@ -545,8 +545,9 @@ fn render_token<'a>(
             );
             Ok(y)
         }
-        ChordFileExpression::ColumnBreak => Ok(0.0),
-        ChordFileExpression::PageBreak => Ok(0.0),
+        ChordFileExpression::ColumnBreak | ChordFileExpression::PageBreak => {
+            Ok(0.0)
+        }
         ChordFileExpression::NewSong => Ok(std::f32::NEG_INFINITY),
         ChordFileExpression::Line { s } => c.text(|t| {
             let text_size = 12.0;
@@ -566,20 +567,20 @@ fn render_token<'a>(
                     t.set_rise(text_size * 0.9)?;
                     t.set_fill_color(Color::gray(96))?;
                     t.set_font(&chordfont, chord_size)?;
-                    let chord_width = chordfont.get_width_raw(&part) as i32;
-                    t.show_adjusted(&[(&part, chord_width)])?;
+                    let chord_width = chordfont.get_width_raw(part) as i32;
+                    t.show_adjusted(&[(part, chord_width)])?;
                     last_chord_width =
                         (chord_width + 400) as f32 * chord_size / 1000.0;
                     t.grestore()?;
                 } else {
                     let part = {
-                        if part.len() > 0 {
-                            part.to_string()
+                        if part.is_empty() {
+                            " "
                         } else {
-                            " ".to_string()
+                            part
                         }
                     };
-                    let text_width = times.get_width(text_size, &part);
+                    let text_width = times.get_width(text_size, part);
                     if last_chord_width > text_width && i + 1 < s.len() {
                         let extra = last_chord_width - text_width;
                         let n_space =
@@ -590,7 +591,7 @@ fn render_token<'a>(
                             t.set_char_spacing(extra / part.len() as f32)?;
                         }
                     }
-                    t.show(&part)?;
+                    t.show(part)?;
                     if last_chord_width > text_width {
                         t.set_char_spacing(0.0)?;
                         t.set_word_spacing(0.0)?;
