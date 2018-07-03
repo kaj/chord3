@@ -163,8 +163,8 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
             let re =
                 Regex::new(r"\{(?P<cmd>\w+)(?::?\s*(?P<arg>.*))?\}").unwrap();
             if let Some(caps) = re.captures(&line) {
-                let arg = caps.name("arg").unwrap_or("").to_string();
-                match &*caps.name("cmd").unwrap().to_lowercase() {
+                let arg = caps.name("arg").map(|m| m.as_str()).unwrap_or("").to_string();
+                match &*caps.name("cmd").unwrap().as_str().to_lowercase() {
                     "title" | "t"
                         => Some(ChordFileExpression::Title{s: arg}),
                     "subtitle" | "st"
@@ -179,20 +179,20 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                             let s = |n| {
                                 //println!("String {} is {:?}", n,
                                 //         caps.at(n as usize+2));
-                                match caps.at(n as usize+2) {
+                                match caps.get(n as usize+2).map(|m| m.as_str()) {
                                     Some("x") | Some("X") |
                                     Some("-") | None => -1,
                                     Some(s) => s.parse::<i8>().unwrap(),
                                 }
                             };
                             Some(ChordFileExpression::ChordDef {
-                                name: caps.at(1).unwrap().to_string(),
+                                name: caps.get(1).unwrap().as_str().to_string(),
                                 def: vec!(s(0),
                                           s(1), s(2), s(3),
                                           s(4), s(5), s(6))
                             })
                         } else {
-                            let whole = caps.at(0).unwrap();
+                            let whole = caps.get(0).unwrap().as_str();
                             println!("Warning: Bad chord definition {}", whole);
                             Some(ChordFileExpression::Comment{
                                 s:whole.to_string()
@@ -244,7 +244,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                     x => {
                         println!("unknown expression {}", x);
                         Some(ChordFileExpression::Comment{
-                            s: caps.at(0).unwrap().to_string()
+                            s: caps.get(0).unwrap().as_str().to_string()
                         })
                     }
                 }
@@ -252,9 +252,9 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                 let mut s = vec![];
                 let re = Regex::new(r"([^\[]*)(?:\[([^\]]*)\])?").unwrap();
                 for caps in re.captures_iter(&line.replace("\t", "    ")) {
-                    s.push(caps.at(1).unwrap().to_string());
-                    if let Some(chord) = caps.at(2) {
-                        s.push(chord.to_string());
+                    s.push(caps.get(1).unwrap().as_str().to_string());
+                    if let Some(chord) = caps.get(2) {
+                        s.push(chord.as_str().to_string());
                     }
                 }
                 Some(ChordFileExpression::Line { s: s })
