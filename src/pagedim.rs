@@ -10,7 +10,7 @@ impl PageDim {
         PageDim {
             width: 596.0,
             height: 842.0,
-            pageno: pageno,
+            pageno,
         }
     }
     pub fn next(&self) -> PageDim {

@@ -74,33 +74,33 @@ fn chordbox<'a>(
     };
     c.set_line_width(0.3)?;
     for b in 0..=n_bands {
-        let y = top - b as f32 * dy;
+        let y = top - f32::from(b) * dy;
         c.line(left, y, right, y)?;
     }
     for s in 0..n_strings {
-        let x = left + s as f32 * dx;
+        let x = left + f32::from(s) * dx;
         c.line(x, top + up, x, bottom)?;
     }
     c.stroke()?;
     let radius = 1.4;
     let above = top + 2.0 + radius;
-    for (s, string) in strings[1..].iter().enumerate() {
-        let x = left + s as f32 * dx;
-        match string {
+    for (string, band) in strings[1..].iter().enumerate() {
+        let x = left + string as f32 * dx;
+        match *band {
             -2 => (), // No-op for unknown chord
             -1 => {
-                let (l, r) = (x - radius, x + radius);
-                let (t, b) = (above - radius, above + radius);
-                c.line(l, t, r, b)?;
-                c.line(r, t, l, b)?;
+                let (xl, xr) = (x - radius, x + radius);
+                let (yt, yb) = (above - radius, above + radius);
+                c.line(xl, yt, xr, yb)?;
+                c.line(xr, yt, xl, yb)?;
                 c.stroke()?;
             }
             0 => {
                 c.circle(x, above, radius)?;
                 c.stroke()?;
             }
-            y => {
-                let y = top - (f32::from(*y) - 0.5) * dy;
+            band => {
+                let y = top - (f32::from(band) - 0.5) * dy;
                 c.circle(x, y, radius + 0.4)?;
                 c.fill()?;
             }
@@ -226,7 +226,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                             }
                         }
                         Some(ChordFileExpression::Chorus{
-                            lines: lines
+                            lines
                         })
                     }
                     "eoc" | "end_of_chorus" =>
@@ -243,7 +243,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                             }
                         }
                         Some(ChordFileExpression::Tab{
-                            lines: lines
+                            lines
                         })
                     }
                     "eot" | "end_of_tab" =>
@@ -275,7 +275,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                         s.push(chord.as_str().to_string());
                     }
                 }
-                Some(ChordFileExpression::Line { s: s })
+                Some(ChordFileExpression::Line { s })
             }
         } else {
             None
