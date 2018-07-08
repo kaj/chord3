@@ -1,8 +1,6 @@
 # chord3
-[![Build Status](https://travis-ci.org/kaj/chord3.svg?branch=master)]
-(https://travis-ci.org/kaj/chord3)
-[![Crate](https://meritbadge.herokuapp.com/chord3)]
-(https://crates.io/crates/chord3)
+[![Build Status](https://travis-ci.org/kaj/chord3.svg?branch=master)](https://travis-ci.org/kaj/chord3)
+[![Crate](https://meritbadge.herokuapp.com/chord3)](https://crates.io/crates/chord3)
 
 Chord3 takes a (set of) chopro file(s) and converts them to a single
 pdf file.  If no file names are given as arguments, a single chopro
