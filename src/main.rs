@@ -1,6 +1,7 @@
 extern crate pdf_canvas;
 extern crate regex;
 
+#[macro_use]
 extern crate clap;
 #[macro_use]
 extern crate lazy_static;
@@ -16,7 +17,7 @@ use std::sync::Mutex;
 use std::vec::Vec;
 
 mod chords;
-use chords::ChordHolder;
+use chords::{ChordHolder, Instrument};
 mod pagedim;
 use pagedim::PageDim;
 
@@ -27,13 +28,19 @@ fn chordbox<'a>(
     name: &str,
     strings: &[i8],
 ) -> io::Result<()> {
-    let dx = 5.0;
-    let dy = 7.0;
-    let right = left + 5.0 * dx;
-    let bottom = top - 4.4 * dy;
+    let n_strings = (strings.len() - 1) as u8;
+    let n_bands: u8 = if n_strings == 4 { 8 } else { 4 };
+    let (dx, dy) = if n_strings == 4 {
+        (5.5, 5.5)
+    } else {
+        (5.0, 7.0)
+    };
+    let right = left + f32::from(n_strings - 1) * dx;
+    let bottom = top - (f32::from(n_bands) + 0.4) * dy;
+    let radius = 1.4;
     c.center_text(
-        left + 2.0 * dx,
-        top + dy,
+        (left + right) / 2.0,
+        top + 2.0 + 4.0 * radius,
         BuiltinFont::Helvetica_Oblique,
         12.0,
         name,
@@ -43,6 +50,17 @@ fn chordbox<'a>(
         c.set_line_width(1.0)?;
         c.line(left - 0.15, top + 0.5, right + 0.15, top + 0.5)?;
         c.stroke()?;
+        for mark in &[5_u8, 7, 10] {
+            if n_bands >= *mark {
+                c.right_text(
+                    left - 0.4 * dx,
+                    top - (f32::from(*mark) - 0.1) * dy,
+                    BuiltinFont::Helvetica,
+                    dy,
+                    &format!("{}", mark),
+                )?;
+            }
+        }
         0.0
     } else {
         c.right_text(
@@ -55,20 +73,20 @@ fn chordbox<'a>(
         1.6
     };
     c.set_line_width(0.3)?;
-    for b in 0..5 {
+    for b in 0..=n_bands {
         let y = top - b as f32 * dy;
         c.line(left, y, right, y)?;
     }
-    for s in 0..6 {
+    for s in 0..n_strings {
         let x = left + s as f32 * dx;
         c.line(x, top + up, x, bottom)?;
     }
     c.stroke()?;
     let radius = 1.4;
     let above = top + 2.0 + radius;
-    for s in 0..6 {
+    for (s, string) in strings[1..].iter().enumerate() {
         let x = left + s as f32 * dx;
-        match strings[s + 1] {
+        match string {
             -2 => (), // No-op for unknown chord
             -1 => {
                 let (l, r) = (x - radius, x + radius);
@@ -82,7 +100,7 @@ fn chordbox<'a>(
                 c.stroke()?;
             }
             y => {
-                let y = top - (f32::from(y) - 0.5) * dy;
+                let y = top - (f32::from(*y) - 0.5) * dy;
                 c.circle(x, y, radius + 0.4)?;
                 c.fill()?;
             }
@@ -300,6 +318,14 @@ fn main() {
                 .help("Add a separate page of chord definitions"),
         )
         .arg(
+            Arg::with_name("INSTRUMENT")
+                .long("instrument")
+                .possible_values(&Instrument::variants())
+                .default_value(Instrument::variants()[0])
+                .case_insensitive(true)
+                .help("Show chord boxes for this instrument"),
+        )
+        .arg(
             Arg::with_name("INPUT")
                 .required_unless("CHORDS")
                 .multiple(true)
@@ -332,24 +358,37 @@ fn main() {
     ));
 
     let show_sourcenames = args.is_present("SOURCENAMES");
+    let instrument =
+        value_t!(args, "INSTRUMENT", Instrument).unwrap_or_default();
 
     let mut page = PageDim::a4(1);
     if let Some(inputs) = args.values_of("INPUT") {
         for name in inputs {
-            match render_song(&mut document, name, show_sourcenames, page) {
+            match render_song(
+                &mut document,
+                name,
+                show_sourcenames,
+                page,
+                instrument,
+            ) {
                 Ok(p) => page = p.next(),
                 Err(e) => println!("Failed to handle {}: {}", name, e),
             }
         }
     }
     if args.is_present("CHORDS") {
-        render_chordlist(&mut document, page).expect("Render chordlist");
+        render_chordlist(&mut document, page, instrument)
+            .expect("Render chordlist");
     }
     document.finish().unwrap();
 }
 
-fn render_chordlist(document: &mut Pdf, page: PageDim) -> io::Result<()> {
-    let chords = ChordHolder::new();
+fn render_chordlist(
+    document: &mut Pdf,
+    page: PageDim,
+    instrument: Instrument,
+) -> io::Result<()> {
+    let chords = ChordHolder::new_for(instrument);
 
     document.render_page(page.width(), page.height(), |c| {
         let s = "Chords";
@@ -371,9 +410,10 @@ fn render_song(
     songfilename: &str,
     show_sourcename: bool,
     page: PageDim,
+    instrument: Instrument,
 ) -> io::Result<PageDim> {
     let mut source = ChoproParser::open(songfilename)?;
-    let mut chords = ChordHolder::new();
+    let mut chords = ChordHolder::new_for(instrument);
     let mut page = page;
     let mut column_top = page.top();
     let mut left = page.left();
@@ -410,7 +450,7 @@ fn render_song(
                     if y == std::f32::NEG_INFINITY {
                         render_chordboxes(c, page, chords.get_used())?;
                         n_cols = 1;
-                        chords = ChordHolder::new();
+                        chords = ChordHolder::new_for(instrument);
                         page = page.next();
                         left = page.left();
                         return Ok(());
@@ -450,8 +490,12 @@ fn render_chordboxes<'a>(
     page: PageDim,
     used_chords: Vec<(&str, &Vec<i8>)>,
 ) -> io::Result<()> {
-    let box_width = 40.0;
-    let box_height = 62.0;
+    let (box_width, box_height) =
+        if used_chords.first().map(|(_, v)| v.len() == 7).unwrap_or(true) {
+            (42.0, 62.0)
+        } else {
+            (36.0, 76.0)
+        };
     let n_chords = used_chords.len() as u32;
     if n_chords > 0 {
         let n_aside = (page.inner_width() / box_width) as u32;
