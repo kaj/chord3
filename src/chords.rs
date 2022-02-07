@@ -285,10 +285,11 @@ lazy_static! {
         let x = -1;
         chord("Ab",    1, 1, 3, 4); // also 7 6 3 4 or 1 1 3 x
 
-        chord("A",     2, 2, 4, 5); // also 9 7 4 5 or 2 2 4 x
+        chord("A",     9, 7, 4, 5); // also 2 2 4 5 or 2 2 4 x
         chord("A7",    6, 5, 7, 5); // also 6 5 0 0
-        chord("Am",    2, 2, 3, 5); // also 5 7 7 x or 9 7 3 5
+        chord("Am",    9, 7, 3, 5); // also 2 2 3 5 or 5 7 7 x
         chord("Am7",   0, 2, 3, 0); // also 2 2 3 3
+
         chord("Bb",    3, 3, 5, 7); // also 10 8 5 6 or 3 3 5 x
 
         chord("B",     4, 4, 6, 7); // also 11 9 6 7
@@ -301,6 +302,7 @@ lazy_static! {
         chord("Cm",    5, 1, 3, x); // also 0 1 3 x or 5 5 6 8
         chord("Cm7",   3, 1, 3, x); // also 5 5 6 6
         chord("Cmaj7", 5, 2, 2, 3); // also 5 5 7 7
+        chord("C/G",   0, 2, 3, 0);
 
         chord("C#",    6, 3, 4, 1); // also 1 3 4 x or 6 3 4 x
         chord("C#7",   4, 3, 4, x);
