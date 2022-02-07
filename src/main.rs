@@ -1,12 +1,10 @@
+extern crate clap;
 extern crate pdf_canvas;
 extern crate regex;
 
 #[macro_use]
-extern crate clap;
-#[macro_use]
 extern crate lazy_static;
-
-use clap::{App, Arg};
+use clap::Parser;
 use pdf_canvas::graphicsstate::Color;
 use pdf_canvas::{BuiltinFont, Canvas, Pdf};
 use regex::Regex;
@@ -20,6 +18,48 @@ mod chords;
 use chords::{ChordHolder, Instrument};
 mod pagedim;
 use pagedim::PageDim;
+
+#[derive(Parser)]
+#[clap(
+    about,
+    author,
+    version,
+    mut_arg("input", |i| i.required_unless_present("chords")),
+    after_help =
+        "At least one INPUT file is required unless the --chords flag is \
+         given.\n\n\
+         Each INPUT file contains one or more song in the chopro format, \
+         which is described at \
+         https://github.com/kaj/chord3/blob/master/chopro.md ."
+)]
+struct Args {
+    /// Title (in metadata) of the output PDF file.
+    #[clap(long, default_value = "Songbook")]
+    title: String,
+
+    /// Author (in metadata) of the output PDF file
+    #[clap(long)]
+    author: Option<String>,
+
+    /// Show chord boxes for this instrument.
+    #[clap(long, arg_enum, default_value_t)]
+    instrument: Instrument,
+
+    /// Add a separate page of chord definitions
+    #[clap(long)]
+    chords: bool,
+
+    /// Output PDF file name.
+    #[clap(short, long, default_value = "chords.pdf")]
+    output: String,
+
+    /// Show name of chopro source file on page
+    #[clap(long)]
+    sourcenames: bool,
+
+    /// Chopro file(s) to parse
+    input: Vec<String>,
+}
 
 fn chordbox<'a>(
     c: &mut Canvas<'a>,
@@ -299,71 +339,16 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
 }
 
 fn main() {
-    let args = App::new("chord3")
-        .version(env!("CARGO_PKG_VERSION"))
-        .author("Rasmus Kaj <rasmus@krats.se>")
-        .about("Create pdf songbooks from chopro source.")
-        .arg(
-            Arg::with_name("OUTPUT")
-                .long("output")
-                .short("o")
-                .takes_value(true)
-                .help("Output PDF file name (default chords.pdf)"),
-        )
-        .arg(
-            Arg::with_name("TITLE")
-                .long("title")
-                .takes_value(true)
-                .help("Title (in metadata) of the output PDF file"),
-        )
-        .arg(
-            Arg::with_name("AUTHOR")
-                .long("author")
-                .takes_value(true)
-                .help("Author (in metadata) of the output PDF file"),
-        )
-        .arg(
-            Arg::with_name("SOURCENAMES")
-                .long("sourcenames")
-                .help("Show name of chopro source file on page"),
-        )
-        .arg(
-            Arg::with_name("CHORDS")
-                .long("chords")
-                .help("Add a separate page of chord definitions"),
-        )
-        .arg(
-            Arg::with_name("INSTRUMENT")
-                .long("instrument")
-                .possible_values(&Instrument::variants())
-                .default_value(Instrument::variants()[0])
-                .case_insensitive(true)
-                .help("Show chord boxes for this instrument"),
-        )
-        .arg(
-            Arg::with_name("INPUT")
-                .required_unless("CHORDS")
-                .multiple(true)
-                .help("Chopro file(s) to parse"),
-        )
-        .after_help(
-            "At least one INPUT file is required unless the --chords \
-             flag is given.\n\n\
-             Each INPUT file contains one or more song in the \
-             chopro format, which is described at \
-             https://github.com/kaj/chord3/blob/master/chopro.md .",
-        )
-        .get_matches();
-
-    let filename = args.value_of("OUTPUT").unwrap_or("chords.pdf");
+    let args = Args::parse();
+    let filename = &args.output;
     let mut document = Pdf::create(filename)
         .map_err(|err| {
             println!("Failed to open {}: {}", filename, err);
             exit(1);
         })
         .unwrap();
-    document.set_title(args.value_of("TITLE").unwrap_or("Songbook"));
-    if let Some(author) = args.value_of("AUTHOR") {
+    document.set_title(&args.title);
+    if let Some(author) = args.author.as_ref() {
         document.set_author(author);
     }
     document.set_producer(concat!(
@@ -372,26 +357,23 @@ fn main() {
         "\nhttps://github.com/kaj/chord3"
     ));
 
-    let show_sourcenames = args.is_present("SOURCENAMES");
-    let instrument =
-        value_t!(args, "INSTRUMENT", Instrument).unwrap_or_default();
+    let show_sourcenames = args.sourcenames;
+    let instrument = args.instrument;
 
     let mut page = PageDim::a4(1);
-    if let Some(inputs) = args.values_of("INPUT") {
-        for name in inputs {
-            match render_song(
-                &mut document,
-                name,
-                show_sourcenames,
-                page,
-                instrument,
-            ) {
-                Ok(p) => page = p.next(),
-                Err(e) => println!("Failed to handle {}: {}", name, e),
-            }
+    for name in &args.input {
+        match render_song(
+            &mut document,
+            name,
+            show_sourcenames,
+            page,
+            instrument,
+        ) {
+            Ok(p) => page = p.next(),
+            Err(e) => println!("Failed to handle {}: {}", name, e),
         }
     }
-    if args.is_present("CHORDS") {
+    if args.chords {
         render_chordlist(&mut document, page, instrument)
             .expect("Render chordlist");
     }

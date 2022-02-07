@@ -1,12 +1,11 @@
+use clap::ArgEnum;
 use std::collections::{BTreeMap, BTreeSet};
 use std::vec::Vec;
 
-arg_enum! {
-    #[derive(PartialEq, Debug, Copy, Clone)]
-    pub enum Instrument {
-        Guitar,
-        Mandolin,
-    }
+#[derive(ArgEnum, PartialEq, Debug, Copy, Clone)]
+pub enum Instrument {
+    Guitar,
+    Mandolin,
 }
 
 impl Default for Instrument {
