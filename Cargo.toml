@@ -4,6 +4,8 @@ version = "0.3.1-PRE"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 repository = "https://github.com/kaj/chord3"
 description = "Create pdf songbooks from chopro source."
+categories = ["text-processing", "command-line-utilities"]
+keywords = ["chopro", "music", "lyrics", "guitar", "mandolin"]
 license = "Beerware"
 
 [dependencies]
