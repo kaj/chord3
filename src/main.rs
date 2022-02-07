@@ -235,7 +235,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                     }
                     "soc" | "start_of_chorus" => {
                         let mut lines = vec![];
-                        while let Some(line) = self.next() {
+                        for line in self {
                             match line {
                                 ChordFileExpression::EndOfChorus => {
                                     break;

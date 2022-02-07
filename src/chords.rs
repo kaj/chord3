@@ -40,11 +40,11 @@ impl ChordHolder {
         }
     }
     pub fn use_chord(&mut self, chord: &str) {
-        if !(chord == "NC"
+        if !(chord.is_empty()
+            || chord == "NC"
             || chord == "N.C."
             || chord == "%"
             || chord == "-"
-            || chord == ""
             || chord.starts_with('/')
             || chord.starts_with('x'))
         {
@@ -86,8 +86,8 @@ impl ChordHolder {
     }
 
     fn replacement(name: &str) -> Option<String> {
-        if name.starts_with('H') {
-            Some(format!("B{}", &name[1..]))
+        if let Some(opts) = name.strip_prefix('H') {
+            Some(format!("B{}", opts))
         } else if name.len() >= 2 {
             match &name[..2] {
                 "A#" => Some(format!("Bb{}", &name[2..])),
