@@ -1,5 +1,2 @@
 max_width = 80
-
-report_fixme = "Always"
 reorder_imports = true
-write_mode = "Diff"

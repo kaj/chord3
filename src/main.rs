@@ -7,8 +7,8 @@ extern crate clap;
 extern crate lazy_static;
 
 use clap::{App, Arg};
-use pdf_canvas::{BuiltinFont, Canvas, Pdf};
 use pdf_canvas::graphicsstate::Color;
+use pdf_canvas::{BuiltinFont, Canvas, Pdf};
 use regex::Regex;
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -181,14 +181,21 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
             let re =
                 Regex::new(r"\{(?P<cmd>\w+)(?::?\s*(?P<arg>.*))?\}").unwrap();
             if let Some(caps) = re.captures(&line) {
-                let arg = caps.name("arg").map(|m| m.as_str()).unwrap_or("").to_string();
+                let arg = caps
+                    .name("arg")
+                    .map(|m| m.as_str())
+                    .unwrap_or("")
+                    .to_string();
                 match &*caps.name("cmd").unwrap().as_str().to_lowercase() {
-                    "title" | "t"
-                        => Some(ChordFileExpression::Title{s: arg}),
-                    "subtitle" | "st"
-                        => Some(ChordFileExpression::SubTitle{s:arg}),
-                    "comment" | "c" | "ci" | "cb"
-                        => Some(ChordFileExpression::Comment{s:arg}),
+                    "title" | "t" => {
+                        Some(ChordFileExpression::Title { s: arg })
+                    }
+                    "subtitle" | "st" => {
+                        Some(ChordFileExpression::SubTitle { s: arg })
+                    }
+                    "comment" | "c" | "ci" | "cb" => {
+                        Some(ChordFileExpression::Comment { s: arg })
+                    }
                     "define" => {
                         //println!("Parse chord def '{}'", arg);
                         let re = Regex::new(
@@ -197,42 +204,52 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                             let s = |n| {
                                 //println!("String {} is {:?}", n,
                                 //         caps.at(n as usize+2));
-                                match caps.get(n as usize+2).map(|m| m.as_str()) {
-                                    Some("x") | Some("X") |
-                                    Some("-") | None => -1,
+                                match caps
+                                    .get(n as usize + 2)
+                                    .map(|m| m.as_str())
+                                {
+                                    Some("x") | Some("X") | Some("-")
+                                    | None => -1,
                                     Some(s) => s.parse::<i8>().unwrap(),
                                 }
                             };
                             Some(ChordFileExpression::ChordDef {
                                 name: caps.get(1).unwrap().as_str().to_string(),
-                                def: vec!(s(0),
-                                          s(1), s(2), s(3),
-                                          s(4), s(5), s(6))
+                                def: vec![
+                                    s(0),
+                                    s(1),
+                                    s(2),
+                                    s(3),
+                                    s(4),
+                                    s(5),
+                                    s(6),
+                                ],
                             })
                         } else {
                             let whole = caps.get(0).unwrap().as_str();
                             println!("Warning: Bad chord definition {}", whole);
-                            Some(ChordFileExpression::Comment{
-                                s:whole.to_string()
+                            Some(ChordFileExpression::Comment {
+                                s: whole.to_string(),
                             })
                         }
-                    },
+                    }
                     "soc" | "start_of_chorus" => {
-                        let mut lines = vec!();
+                        let mut lines = vec![];
                         while let Some(line) = self.next() {
                             match line {
-                                ChordFileExpression::EndOfChorus => { break; },
-                                line => lines.push(line)
+                                ChordFileExpression::EndOfChorus => {
+                                    break;
+                                }
+                                line => lines.push(line),
                             }
                         }
-                        Some(ChordFileExpression::Chorus{
-                            lines
-                        })
+                        Some(ChordFileExpression::Chorus { lines })
                     }
-                    "eoc" | "end_of_chorus" =>
-                        Some(ChordFileExpression::EndOfChorus),
+                    "eoc" | "end_of_chorus" => {
+                        Some(ChordFileExpression::EndOfChorus)
+                    }
                     "sot" | "start_of_tab" => {
-                        let mut lines = vec!();
+                        let mut lines = vec![];
                         let end =
                             Regex::new(r"\{(eot|end_of_tab):?\s*").unwrap();
                         while let Some(line) = self.nextline() {
@@ -242,27 +259,25 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                                 lines.push(line)
                             }
                         }
-                        Some(ChordFileExpression::Tab{
-                            lines
+                        Some(ChordFileExpression::Tab { lines })
+                    }
+                    "eot" | "end_of_tab" => Some(ChordFileExpression::EndOfTab),
+                    "columns" | "col" => {
+                        Some(ChordFileExpression::StartColumns {
+                            n_columns: arg.parse::<u8>().unwrap(),
                         })
                     }
-                    "eot" | "end_of_tab" =>
-                        Some(ChordFileExpression::EndOfTab),
-                    "columns" | "col" =>
-                        Some(ChordFileExpression::StartColumns{
-                            n_columns: arg.parse::<u8>().unwrap()
-                        }),
-                    "colb" =>
-                        Some(ChordFileExpression::ColumnBreak),
+                    "colb" => Some(ChordFileExpression::ColumnBreak),
                     "page_break" | "np" =>
-                        // TODO Separate implementations, this is a fallback:
-                        Some(ChordFileExpression::PageBreak),
-                    "new_song" =>
-                        Some(ChordFileExpression::NewSong),
+                    // TODO Separate implementations, this is a fallback:
+                    {
+                        Some(ChordFileExpression::PageBreak)
+                    }
+                    "new_song" => Some(ChordFileExpression::NewSong),
                     x => {
                         println!("unknown expression {}", x);
-                        Some(ChordFileExpression::Comment{
-                            s: caps.get(0).unwrap().as_str().to_string()
+                        Some(ChordFileExpression::Comment {
+                            s: caps.get(0).unwrap().as_str().to_string(),
                         })
                     }
                 }
@@ -490,12 +505,15 @@ fn render_chordboxes<'a>(
     page: PageDim,
     used_chords: Vec<(&str, &Vec<i8>)>,
 ) -> io::Result<()> {
-    let (box_width, box_height) =
-        if used_chords.first().map(|(_, v)| v.len() == 7).unwrap_or(true) {
-            (42.0, 62.0)
-        } else {
-            (36.0, 76.0)
-        };
+    let (box_width, box_height) = if used_chords
+        .first()
+        .map(|(_, v)| v.len() == 7)
+        .unwrap_or(true)
+    {
+        (42.0, 62.0)
+    } else {
+        (36.0, 76.0)
+    };
     let n_chords = used_chords.len() as u32;
     if n_chords > 0 {
         let n_aside = (page.inner_width() / box_width) as u32;
@@ -596,11 +614,12 @@ fn render_token<'a>(
         ChordFileExpression::Line { s } => c.text(|t| {
             let text_size = 12.0;
             let chord_size = 9.0;
-            let y = y - 1.1 * (if s.len() == 1 {
-                text_size
-            } else {
-                text_size + chord_size
-            });
+            let y = y - 1.1
+                * (if s.len() == 1 {
+                    text_size
+                } else {
+                    text_size + chord_size
+                });
             t.set_font(&times, text_size)?;
             t.pos(left, y)?;
             let mut last_chord_width = 0.0;

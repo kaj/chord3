@@ -40,8 +40,12 @@ impl ChordHolder {
         }
     }
     pub fn use_chord(&mut self, chord: &str) {
-        if !(chord == "NC" || chord == "N.C." || chord == "%" || chord == "-"
-            || chord == "" || chord.starts_with('/')
+        if !(chord == "NC"
+            || chord == "N.C."
+            || chord == "%"
+            || chord == "-"
+            || chord == ""
+            || chord.starts_with('/')
             || chord.starts_with('x'))
         {
             self.used.insert(chord.to_string());
@@ -139,7 +143,7 @@ fn test_nochord_and_unknown() {
 }
 
 lazy_static! {
-    static ref UNKNOWN_CHORD: Vec<i8> = { vec![0,-2,-2,-2,-2,-2,-2] };
+    static ref UNKNOWN_CHORD: Vec<i8> = vec![0,-2,-2,-2,-2,-2,-2];
     static ref KNOWN_CHORDS: BTreeMap<&'static str, Vec<i8>> = {
     let mut result = BTreeMap::new();
     {
@@ -274,7 +278,7 @@ lazy_static! {
     result
     };
 
-    static ref UNKNOWN_MANDOLIN_CHORD: Vec<i8> = { vec![0,-2,-2,-2,-2] };
+    static ref UNKNOWN_MANDOLIN_CHORD: Vec<i8> = vec![0,-2,-2,-2,-2];
     static ref KNOWN_MANDOLIN_CHORDS: BTreeMap<&'static str, Vec<i8>> = {
     let mut result = BTreeMap::new();
     {
