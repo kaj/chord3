@@ -1,9 +1,8 @@
-extern crate clap;
-extern crate pdf_canvas;
-extern crate regex;
+mod chords;
+mod pagedim;
 
-#[macro_use]
-extern crate lazy_static;
+use crate::chords::{ChordHolder, Instrument};
+use crate::pagedim::PageDim;
 use clap::Parser;
 use pdf_canvas::graphicsstate::Color;
 use pdf_canvas::{BuiltinFont, Canvas, Pdf};
@@ -12,12 +11,6 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::process::exit;
 use std::sync::Mutex;
-use std::vec::Vec;
-
-mod chords;
-use chords::{ChordHolder, Instrument};
-mod pagedim;
-use pagedim::PageDim;
 
 #[derive(Parser)]
 #[clap(
