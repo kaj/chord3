@@ -300,7 +300,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
             } else {
                 let mut s = vec![];
                 let re = Regex::new(r"([^\[]*)(?:\[([^\]]*)\])?").unwrap();
-                for caps in re.captures_iter(&line.replace("\t", "    ")) {
+                for caps in re.captures_iter(&line.replace('\t', "    ")) {
                     s.push(caps.get(1).unwrap().as_str().to_string());
                     if let Some(chord) = caps.get(2) {
                         s.push(chord.as_str().to_string());
