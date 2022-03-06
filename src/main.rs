@@ -232,32 +232,15 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                     "define" => {
                         //println!("Parse chord def '{}'", arg);
                         let re = Regex::new(
-                            r"(?i)^([\S]+)\s+base-fret\s+([0-9]+)\s+frets(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))\s*$").unwrap();
+                            r"(?i)^([\S]+)\s+base-fret\s+([0-9]+)\s+frets(?:\s+([x0-9-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))?(?:\s+([x0-5-]))?\s*$").unwrap();
                         if let Some(caps) = re.captures(&arg) {
-                            let s = |n| {
-                                //println!("String {} is {:?}", n,
-                                //         caps.at(n as usize+2));
-                                match caps
-                                    .get(n as usize + 2)
-                                    .map(|m| m.as_str())
-                                {
-                                    Some("x") | Some("X") | Some("-")
-                                    | None => -1,
-                                    Some(s) => s.parse::<i8>().unwrap(),
-                                }
-                            };
-                            Some(ChordFileExpression::ChordDef {
-                                name: caps.get(1).unwrap().as_str().to_string(),
-                                def: vec![
-                                    s(0),
-                                    s(1),
-                                    s(2),
-                                    s(3),
-                                    s(4),
-                                    s(5),
-                                    s(6),
-                                ],
-                            })
+                            let mut caps = caps.iter().skip(1);
+                            let name: String = caps.next().unwrap().unwrap().as_str().to_string();
+                            let def = caps.flatten().map(|cap| match cap.as_str() {
+                                "x" | "X" | "-" => -1,
+                                s => s.parse::<i8>().unwrap(),
+                            }).collect();
+                            Some(ChordFileExpression::ChordDef { name, def })
                         } else {
                             let whole = caps.get(0).unwrap().as_str();
                             println!("Warning: Bad chord definition {}", whole);
