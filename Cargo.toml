@@ -10,7 +10,7 @@ license = "Beerware"
 edition = "2021"
 
 [dependencies]
-clap = { version = "3.0.14", features = ["derive"] }
+clap = { version = "4.0.8", features = ["derive", "wrap_help"] }
 lazy_static = "1.4.0"
 pdf-canvas = "0.7.0"
 regex = "1.5.4"

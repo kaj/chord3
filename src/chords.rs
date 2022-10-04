@@ -1,11 +1,13 @@
-use clap::ArgEnum;
+use clap::ValueEnum;
 use lazy_static::lazy_static;
 use std::collections::{BTreeMap, BTreeSet};
 use std::vec::Vec;
 
-#[derive(ArgEnum, PartialEq, Debug, Copy, Clone)]
+#[derive(PartialEq, Debug, Copy, Clone, ValueEnum)]
 pub enum Instrument {
+    /// Guitar in e-a-d-g-b-e tuning without capo.
     Guitar,
+    /// Mandolin in g-d-a-e tuning.
     Mandolin,
 }
 

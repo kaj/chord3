@@ -13,7 +13,7 @@ use std::process::exit;
 use std::sync::Mutex;
 
 #[derive(Parser)]
-#[clap(
+#[command(
     about,
     author,
     version,
@@ -27,31 +27,31 @@ use std::sync::Mutex;
 )]
 struct Args {
     /// Title (in metadata) of the output PDF file.
-    #[clap(long, default_value = "Songbook")]
+    #[arg(long, default_value = "Songbook")]
     title: String,
 
     /// Author (in metadata) of the output PDF file
-    #[clap(long)]
+    #[arg(long)]
     author: Option<String>,
 
     /// Show chord boxes for this instrument.
-    #[clap(long, arg_enum, default_value_t)]
+    #[arg(long, value_enum, default_value_t = Instrument::Guitar)]
     instrument: Instrument,
 
     /// Add a separate page of chord definitions
-    #[clap(long)]
+    #[arg(long)]
     chords: bool,
 
     /// Output PDF file name.
-    #[clap(short, long, default_value = "chords.pdf")]
+    #[arg(short, long, default_value = "chords.pdf")]
     output: String,
 
     /// Show name of chopro source file on page
-    #[clap(long)]
+    #[arg(long)]
     sourcenames: bool,
 
     /// Base font size, in points (72 points = 1 inch).
-    #[clap(long, default_value = "12")]
+    #[arg(long, default_value = "12")]
     base_size: f32,
 
     /// Chopro file(s) to parse
