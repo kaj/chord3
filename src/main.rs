@@ -241,11 +241,19 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                             r"(?i)^([\S]+)\s+base-fret\s+([0-9]+)\s+frets(?:\s+([x0-9-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))(?:\s+([x0-5-]))?(?:\s+([x0-5-]))?\s*$").unwrap();
                         if let Some(caps) = re.captures(&arg) {
                             let mut caps = caps.iter().skip(1);
-                            let name: String = caps.next().unwrap().unwrap().as_str().to_string();
-                            let def = caps.flatten().map(|cap| match cap.as_str() {
-                                "x" | "X" | "-" => -1,
-                                s => s.parse::<i8>().unwrap(),
-                            }).collect();
+                            let name: String = caps
+                                .next()
+                                .unwrap()
+                                .unwrap()
+                                .as_str()
+                                .to_string();
+                            let def = caps
+                                .flatten()
+                                .map(|cap| match cap.as_str() {
+                                    "x" | "X" | "-" => -1,
+                                    s => s.parse::<i8>().unwrap(),
+                                })
+                                .collect();
                             Some(ChordFileExpression::ChordDef { name, def })
                         } else {
                             let whole = caps.get(0).unwrap().as_str();
@@ -428,9 +436,21 @@ fn render_song(
                     column_top = y;
                     n_cols = n_columns;
                 } else {
-                    y = render_token(token, y, left, c, &mut chords, base_size)?;
+                    y = render_token(
+                        token,
+                        y,
+                        left,
+                        c,
+                        &mut chords,
+                        base_size,
+                    )?;
                     if y == std::f32::NEG_INFINITY {
-                        render_chordboxes(c, page, chords.get_used(), base_size)?;
+                        render_chordboxes(
+                            c,
+                            page,
+                            chords.get_used(),
+                            base_size,
+                        )?;
                         n_cols = 1;
                         chords = ChordHolder::new_for(instrument);
                         page = page.next();
@@ -518,7 +538,13 @@ fn render_token<'a>(
         ChordFileExpression::Title { s } => {
             c.add_outline(&s);
             let y = y - 1.5 * base_size;
-            c.left_text(left, y, BuiltinFont::Times_Bold, base_size * 4. / 3., &s)?;
+            c.left_text(
+                left,
+                y,
+                BuiltinFont::Times_Bold,
+                base_size * 4. / 3.,
+                &s,
+            )?;
             Ok(y)
         }
         ChordFileExpression::SubTitle { s } => c.text(|t| {
