@@ -3,26 +3,31 @@ pub struct PageDim {
     width: f32,
     height: f32,
     pageno: u32,
+    is_duplex: bool,
 }
 
 impl PageDim {
-    pub fn a4(pageno: u32) -> PageDim {
+    pub fn a4(pageno: u32, is_duplex: bool) -> PageDim {
         PageDim {
             width: 596.0,
             height: 842.0,
             pageno,
+            is_duplex,
         }
     }
     pub fn next(&self) -> PageDim {
         PageDim {
-            width: self.width,
-            height: self.height,
             pageno: self.pageno + 1,
+            ..*self
         }
     }
-    pub fn is_left(&self) -> bool {
-        self.pageno % 2 == 0
+
+    /// A page is verso (left or backside) if duplex is enabled and
+    /// the page number is even (otherwise it is recto).
+    pub fn is_verso(&self) -> bool {
+        self.is_duplex && (self.pageno % 2 == 0)
     }
+
     pub fn inner_width(&self) -> f32 {
         self.width - 95.0
     }
@@ -36,14 +41,14 @@ impl PageDim {
         self.pageno
     }
     pub fn left(&self) -> f32 {
-        if self.is_left() {
+        if self.is_verso() {
             20.0
         } else {
             80.0
         }
     }
     pub fn right(&self) -> f32 {
-        if self.is_left() {
+        if self.is_verso() {
             self.width - 75.0
         } else {
             self.width - 15.0

@@ -9,9 +9,10 @@ project tries to adhere to
 
 ## Unreleased
 
+* Added support for song-defined mandolin chords.
 * Added `--base-size` command line argument, to allow changing the
   base font size in the generated pdf.
-* Added support for song-defined mandolin chords.
+* Added `--no-duplex` option to disable verso and recto page design.
 * Changed `--help` output again, by updating `clap` to 4.0.
 * Added a changelog (this file).
 
@@ -54,7 +55,7 @@ The first actual release.  This was done 2016-10-16.
 * Added more or less complete support for the chopro format.
 * Added support for command line arguments (multiple input files,
   named output file, and some options to control the output).
-* Added support for left and right pages (wider inner margins, page
+* Added support for verso and recto pages (wider inner margins, page
   numbers in the "outer" margin) for double-sided printing.
 * Improved output page format in many ways.
 * Added basic pdf metadata to output, including document outline with

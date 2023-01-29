@@ -30,7 +30,7 @@ struct Args {
     #[arg(long, default_value = "Songbook")]
     title: String,
 
-    /// Author (in metadata) of the output PDF file
+    /// Author (in metadata) of the output PDF file.
     #[arg(long)]
     author: Option<String>,
 
@@ -38,7 +38,7 @@ struct Args {
     #[arg(long, value_enum, default_value_t = Instrument::Guitar)]
     instrument: Instrument,
 
-    /// Add a separate page of chord definitions
+    /// Add a separate page of chord definitions.
     #[arg(long)]
     chords: bool,
 
@@ -46,7 +46,7 @@ struct Args {
     #[arg(short, long, default_value = "chords.pdf")]
     output: String,
 
-    /// Show name of chopro source file on page
+    /// Show name of chopro source file on page.
     #[arg(long)]
     sourcenames: bool,
 
@@ -54,7 +54,15 @@ struct Args {
     #[arg(long, default_value = "12")]
     base_size: f32,
 
-    /// Chopro file(s) to parse
+    /// Disable duplex printing.
+    ///
+    /// When duplex is enabled (the default) the margin is larger on
+    /// the spine side of pages, and page numbers are put in the outer
+    /// corner.
+    #[arg(long, short = 'd')]
+    no_duplex: bool,
+
+    /// Chopro file(s) to parse.
     input: Vec<String>,
 }
 
@@ -351,7 +359,7 @@ fn main() {
     let instrument = args.instrument;
     let base_size = args.base_size;
 
-    let mut page = PageDim::a4(1);
+    let mut page = PageDim::a4(1, !args.no_duplex);
     for name in &args.input {
         match render_song(
             &mut document,
@@ -412,7 +420,7 @@ fn render_song(
         document.render_page(page.width(), page.height(), |c| {
             let mut y = page.top();
             if show_sourcename {
-                if page.is_left() {
+                if page.is_verso() {
                     c.right_text(
                         page.right(),
                         20.0,
@@ -479,7 +487,7 @@ fn render_song(
 fn write_pageno(c: &mut Canvas, page: &PageDim) -> io::Result<()> {
     let font = BuiltinFont::Times_Italic;
     let pageno = format!("{}", page.pageno());
-    if page.is_left() {
+    if page.is_verso() {
         c.left_text(page.left(), 20.0, font, 12.0, &pageno)?;
     } else {
         c.right_text(page.right(), 20.0, font, 12.0, &pageno)?;
