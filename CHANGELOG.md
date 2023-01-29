@@ -7,7 +7,9 @@ The format is based on
 project tries to adhere to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## Version 0.3.4
+
+Released 2023-01-29.
 
 * Added support for song-defined mandolin chords.
 * Added `--base-size` command line argument, to allow changing the
