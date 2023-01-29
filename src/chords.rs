@@ -57,7 +57,7 @@ impl ChordHolder {
         if def.len() == self.unknown_chord.len() {
             self.local.insert(chord, def);
         } else {
-            println!("Ignoring chord def {}, wrong instrument", chord);
+            println!("Ignoring chord def {chord}, wrong instrument");
         }
     }
     pub fn get_used(&self) -> Vec<(&str, &Vec<i8>)> {
@@ -75,7 +75,7 @@ impl ChordHolder {
                             })
                         })
                         .unwrap_or_else(|| {
-                            println!("Warning: Unknown chord {}", name);
+                            println!("Warning: Unknown chord {name}");
                             self.unknown_chord
                         }),
                 )
@@ -89,7 +89,7 @@ impl ChordHolder {
 
     fn replacement(name: &str) -> Option<String> {
         if let Some(opts) = name.strip_prefix('H') {
-            Some(format!("B{}", opts))
+            Some(format!("B{opts}"))
         } else if name.len() >= 2 {
             match &name[..2] {
                 "A#" => Some(format!("Bb{}", &name[2..])),

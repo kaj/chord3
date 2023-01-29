@@ -58,8 +58,8 @@ struct Args {
     input: Vec<String>,
 }
 
-fn chordbox<'a>(
-    c: &mut Canvas<'a>,
+fn chordbox(
+    c: &mut Canvas<'_>,
     left: f32,
     top: f32,
     name: &str,
@@ -70,9 +70,9 @@ fn chordbox<'a>(
     let n_bands: u8 = if n_strings == 4 { 8 } else { 4 };
 
     let (dx, dy) = if n_strings == 4 {
-        (0.458333333 * base_size, 0.4583333333 * base_size)
+        (0.458_333_34 * base_size, 0.458_333_34 * base_size)
     } else {
-        (0.416666666 * base_size, 0.5833333333 * base_size)
+        (0.416_666_66 * base_size, 0.583_333_3 * base_size)
     };
     let right = left + f32::from(n_strings - 1) * dx;
     let bottom = top - (f32::from(n_bands) + 0.4) * dy;
@@ -96,7 +96,7 @@ fn chordbox<'a>(
                     top - (f32::from(*mark) - 0.1) * dy,
                     BuiltinFont::Helvetica,
                     dy,
-                    &format!("{}", mark),
+                    &format!("{mark}"),
                 )?;
             }
         }
@@ -107,7 +107,7 @@ fn chordbox<'a>(
             top - 0.9 * dy,
             BuiltinFont::Helvetica,
             dy,
-            &format!("{}", barre),
+            &format!("{barre}"),
         )?;
         1.6
     };
@@ -195,7 +195,7 @@ impl<R: io::Read> ChoproParser<R> {
                     }
                 }
                 Some(Err(e)) => {
-                    println!("Failed to read source: {}", e);
+                    println!("Failed to read source: {e}");
                     self.eof = true;
                     return None;
                 }
@@ -257,7 +257,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                             Some(ChordFileExpression::ChordDef { name, def })
                         } else {
                             let whole = caps.get(0).unwrap().as_str();
-                            println!("Warning: Bad chord definition {}", whole);
+                            println!("Warning: Bad chord definition {whole}");
                             Some(ChordFileExpression::Comment {
                                 s: whole.to_string(),
                             })
@@ -305,7 +305,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                     }
                     "new_song" => Some(ChordFileExpression::NewSong),
                     x => {
-                        println!("unknown expression {}", x);
+                        println!("unknown expression {x}");
                         Some(ChordFileExpression::Comment {
                             s: caps.get(0).unwrap().as_str().to_string(),
                         })
@@ -333,7 +333,7 @@ fn main() {
     let filename = &args.output;
     let mut document = Pdf::create(filename)
         .map_err(|err| {
-            println!("Failed to open {}: {}", filename, err);
+            println!("Failed to open {filename}: {err}");
             exit(1);
         })
         .unwrap();
@@ -362,7 +362,7 @@ fn main() {
             base_size,
         ) {
             Ok(p) => page = p.next(),
-            Err(e) => println!("Failed to handle {}: {}", name, e),
+            Err(e) => println!("Failed to handle {name}: {e}"),
         }
     }
     if args.chords {
@@ -431,7 +431,7 @@ fn render_song(
                 }
             }
             write_pageno(c, &page)?;
-            while let Some(token) = source.next() {
+            for token in source.by_ref() {
                 if let ChordFileExpression::StartColumns { n_columns } = token {
                     column_top = y;
                     n_cols = n_columns;
@@ -487,8 +487,8 @@ fn write_pageno(c: &mut Canvas, page: &PageDim) -> io::Result<()> {
     Ok(())
 }
 
-fn render_chordboxes<'a>(
-    c: &mut Canvas<'a>,
+fn render_chordboxes(
+    c: &mut Canvas<'_>,
     page: PageDim,
     used_chords: Vec<(&str, &Vec<i8>)>,
     base_size: f32,
@@ -522,11 +522,11 @@ fn render_chordboxes<'a>(
     Ok(())
 }
 
-fn render_token<'a>(
+fn render_token(
     token: ChordFileExpression,
     y: f32,
     left: f32,
-    c: &mut Canvas<'a>,
+    c: &mut Canvas<'_>,
     chords: &mut ChordHolder,
     base_size: f32,
 ) -> io::Result<f32> {
@@ -598,8 +598,7 @@ fn render_token<'a>(
         }
         ChordFileExpression::StartColumns { n_columns } => {
             println!(
-                "Warning: StartColumns({}) should be handled earlier",
-                n_columns
+                "Warning: StartColumns({n_columns}) should be handled earlier"
             );
             Ok(y)
         }
