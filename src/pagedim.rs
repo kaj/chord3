@@ -7,10 +7,15 @@ pub struct PageDim {
 }
 
 impl PageDim {
-    pub fn a4(pageno: u32, is_duplex: bool) -> PageDim {
+    pub fn a4(landscape: bool, pageno: u32, is_duplex: bool) -> PageDim {
+        let (width, height) = if landscape {
+            (842.0, 596.0)
+        } else {
+            (596.0, 842.0)
+        };
         PageDim {
-            width: 596.0,
-            height: 842.0,
+            width,
+            height,
             pageno,
             is_duplex,
         }

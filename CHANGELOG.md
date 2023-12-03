@@ -7,6 +7,11 @@ The format is based on
 project tries to adhere to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+* Added an option for landscape page format.
+
+
 ## Version 0.3.4
 
 Released 2023-01-29.

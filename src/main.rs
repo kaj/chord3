@@ -54,6 +54,10 @@ struct Args {
     #[arg(long, default_value = "12")]
     base_size: f32,
 
+    /// Use landscape orientation for the output.
+    #[arg(long)]
+    landscape: bool,
+
     /// Disable duplex printing.
     ///
     /// When duplex is enabled (the default) the margin is larger on
@@ -359,7 +363,7 @@ fn main() {
     let instrument = args.instrument;
     let base_size = args.base_size;
 
-    let mut page = PageDim::a4(1, !args.no_duplex);
+    let mut page = PageDim::a4(args.landscape, 1, !args.no_duplex);
     for name in &args.input {
         match render_song(
             &mut document,
@@ -465,7 +469,7 @@ fn render_song(
                         left = page.left();
                         return Ok(());
                     }
-                    if y < 50.0 {
+                    if y < (2. + 4. *base_size) {
                         left += page.inner_width() / f32::from(n_cols) + 10.0;
                         if left < page.right() {
                             y = column_top;
