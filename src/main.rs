@@ -66,6 +66,12 @@ struct Args {
     #[arg(long, short = 'd')]
     no_duplex: bool,
 
+    /// Disable visible page numbers
+    ///
+    /// Useful e.g. when writing pages to be included in a larger document.
+    #[arg(long)]
+    no_pageno: bool,
+
     /// Chopro file(s) to parse.
     input: Vec<String>,
 }
@@ -363,7 +369,8 @@ fn main() {
     let instrument = args.instrument;
     let base_size = args.base_size;
 
-    let mut page = PageDim::a4(args.landscape, 1, !args.no_duplex);
+    let mut page =
+        PageDim::a4(args.landscape, 1, !args.no_duplex, !args.no_pageno);
     for name in &args.input {
         match render_song(
             &mut document,
@@ -469,7 +476,7 @@ fn render_song(
                         left = page.left();
                         return Ok(());
                     }
-                    if y < (2. + 4. *base_size) {
+                    if y < (2. + 4. * base_size) {
                         left += page.inner_width() / f32::from(n_cols) + 10.0;
                         if left < page.right() {
                             y = column_top;
@@ -489,12 +496,14 @@ fn render_song(
 }
 
 fn write_pageno(c: &mut Canvas, page: &PageDim) -> io::Result<()> {
-    let font = BuiltinFont::Times_Italic;
-    let pageno = format!("{}", page.pageno());
-    if page.is_verso() {
-        c.left_text(page.left(), 20.0, font, 12.0, &pageno)?;
-    } else {
-        c.right_text(page.right(), 20.0, font, 12.0, &pageno)?;
+    if let Some(pageno) = page.pageno() {
+        let font = BuiltinFont::Times_Italic;
+        let pageno = format!("{}", pageno);
+        if page.is_verso() {
+            c.left_text(page.left(), 20.0, font, 12.0, &pageno)?;
+        } else {
+            c.right_text(page.right(), 20.0, font, 12.0, &pageno)?;
+        }
     }
     Ok(())
 }

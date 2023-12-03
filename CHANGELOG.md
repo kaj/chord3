@@ -10,6 +10,7 @@ project tries to adhere to
 ## Unreleased
 
 * Added an option for landscape page format.
+* Added an option for not writing out page numbers.
 
 
 ## Version 0.3.4

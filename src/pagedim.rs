@@ -4,10 +4,16 @@ pub struct PageDim {
     height: f32,
     pageno: u32,
     is_duplex: bool,
+    show_pageno: bool,
 }
 
 impl PageDim {
-    pub fn a4(landscape: bool, pageno: u32, is_duplex: bool) -> PageDim {
+    pub fn a4(
+        landscape: bool,
+        pageno: u32,
+        is_duplex: bool,
+        show_pageno: bool,
+    ) -> PageDim {
         let (width, height) = if landscape {
             (842.0, 596.0)
         } else {
@@ -18,6 +24,7 @@ impl PageDim {
             height,
             pageno,
             is_duplex,
+            show_pageno,
         }
     }
     pub fn next(&self) -> PageDim {
@@ -42,8 +49,12 @@ impl PageDim {
     pub fn height(&self) -> f32 {
         self.height
     }
-    pub fn pageno(&self) -> u32 {
-        self.pageno
+    pub fn pageno(&self) -> Option<u32> {
+        if self.show_pageno {
+            Some(self.pageno)
+        } else {
+            None
+        }
     }
     pub fn left(&self) -> f32 {
         if self.is_verso() {
