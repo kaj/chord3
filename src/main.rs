@@ -244,10 +244,8 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
             let re =
                 Regex::new(r"\{(?P<cmd>\w+)(?::?\s*(?P<arg>.*))?\}").unwrap();
             if let Some(caps) = re.captures(&line) {
-                let arg = caps
-                    .name("arg")
-                    .map_or("", |m| m.as_str())
-                    .to_string();
+                let arg =
+                    caps.name("arg").map_or("", |m| m.as_str()).to_string();
                 match &*caps.name("cmd").unwrap().as_str().to_lowercase() {
                     "title" | "t" => {
                         Some(ChordFileExpression::Title { s: arg })
@@ -517,14 +515,12 @@ fn render_chordboxes(
     used_chords: Vec<(&str, &Vec<i8>)>,
     base_size: f32,
 ) -> io::Result<()> {
-    let (box_width, box_height) = if used_chords
-        .first()
-        .map_or(true, |(_, v)| v.len() == 7)
-    {
-        (base_size * 3.5, base_size * 31. / 6.)
-    } else {
-        (base_size * 3., base_size * 19. / 3.)
-    };
+    let (box_width, box_height) =
+        if used_chords.first().map_or(true, |(_, v)| v.len() == 7) {
+            (base_size * 3.5, base_size * 31. / 6.)
+        } else {
+            (base_size * 3., base_size * 19. / 3.)
+        };
     let n_chords = used_chords.len() as u32;
     if n_chords > 0 {
         let n_aside = (page.inner_width() / box_width) as u32;
