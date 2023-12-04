@@ -246,8 +246,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
             if let Some(caps) = re.captures(&line) {
                 let arg = caps
                     .name("arg")
-                    .map(|m| m.as_str())
-                    .unwrap_or("")
+                    .map_or("", |m| m.as_str())
                     .to_string();
                 match &*caps.name("cmd").unwrap().as_str().to_lowercase() {
                     "title" | "t" => {
@@ -309,9 +308,8 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                         while let Some(line) = self.nextline() {
                             if end.is_match(&line) {
                                 break;
-                            } else {
-                                lines.push(line)
                             }
+                            lines.push(line);
                         }
                         Some(ChordFileExpression::Tab { lines })
                     }
@@ -503,7 +501,7 @@ fn render_song(
 fn write_pageno(c: &mut Canvas, page: &PageDim) -> io::Result<()> {
     if let Some(pageno) = page.pageno() {
         let font = BuiltinFont::Times_Italic;
-        let pageno = format!("{}", pageno);
+        let pageno = format!("{pageno}");
         if page.is_verso() {
             c.left_text(page.left(), 20.0, font, 12.0, &pageno)?;
         } else {
@@ -521,8 +519,7 @@ fn render_chordboxes(
 ) -> io::Result<()> {
     let (box_width, box_height) = if used_chords
         .first()
-        .map(|(_, v)| v.len() == 7)
-        .unwrap_or(true)
+        .map_or(true, |(_, v)| v.len() == 7)
     {
         (base_size * 3.5, base_size * 31. / 6.)
     } else {
