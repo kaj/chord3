@@ -54,6 +54,15 @@ struct Args {
     #[arg(long, default_value = "12")]
     base_size: f32,
 
+    #[clap(flatten)]
+    page: PageArgs,
+
+    /// Chopro file(s) to parse.
+    input: Vec<String>,
+}
+
+#[derive(Parser)]
+struct PageArgs {
     /// Use landscape orientation for the output.
     #[arg(long)]
     landscape: bool,
@@ -71,9 +80,6 @@ struct Args {
     /// Useful e.g. when writing pages to be included in a larger document.
     #[arg(long)]
     no_pageno: bool,
-
-    /// Chopro file(s) to parse.
-    input: Vec<String>,
 }
 
 fn chordbox(
@@ -368,9 +374,8 @@ fn main() {
     let show_sourcenames = args.sourcenames;
     let instrument = args.instrument;
     let base_size = args.base_size;
+    let mut page = PageDim::from(args.page);
 
-    let mut page =
-        PageDim::a4(args.landscape, 1, !args.no_duplex, !args.no_pageno);
     for name in &args.input {
         match render_song(
             &mut document,

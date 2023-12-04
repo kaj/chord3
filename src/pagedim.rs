@@ -1,3 +1,5 @@
+use crate::PageArgs;
+
 #[derive(Copy, Clone)]
 pub struct PageDim {
     width: f32,
@@ -7,26 +9,25 @@ pub struct PageDim {
     show_pageno: bool,
 }
 
-impl PageDim {
-    pub fn a4(
-        landscape: bool,
-        pageno: u32,
-        is_duplex: bool,
-        show_pageno: bool,
-    ) -> PageDim {
-        let (width, height) = if landscape {
-            (842.0, 596.0)
+impl From<PageArgs> for PageDim {
+    fn from(args: PageArgs) -> Self {
+        let a4 = (842.0, 596.0);
+        let (width, height) = if args.landscape {
+            (a4.0, a4.1)
         } else {
-            (596.0, 842.0)
+            (a4.1, a4.0)
         };
         PageDim {
             width,
             height,
-            pageno,
-            is_duplex,
-            show_pageno,
+            pageno: 1,
+            is_duplex: !args.no_duplex,
+            show_pageno: !args.no_pageno,
         }
     }
+}
+
+impl PageDim {
     pub fn next(&self) -> PageDim {
         PageDim {
             pageno: self.pageno + 1,

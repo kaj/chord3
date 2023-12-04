@@ -11,6 +11,7 @@ project tries to adhere to
 
 * Added an option for landscape page format.
 * Added an option for not writing out page numbers.
+* Some refactoring.
 
 
 ## Version 0.3.4
