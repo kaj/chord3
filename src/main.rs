@@ -318,11 +318,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                         })
                     }
                     "colb" => Some(ChordFileExpression::ColumnBreak),
-                    "page_break" | "np" =>
-                    // TODO Separate implementations, this is a fallback:
-                    {
-                        Some(ChordFileExpression::PageBreak)
-                    }
+                    "page_break" | "np" => Some(ChordFileExpression::PageBreak),
                     "new_song" => Some(ChordFileExpression::NewSong),
                     x => {
                         println!("unknown expression {x}");
