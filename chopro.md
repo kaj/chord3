@@ -62,7 +62,7 @@ The text might be instructions or any kind of interesting annotations.
 
 `{start_of_chorus}` (or `{soc}`) marks the start of the chorus.
 The chorus itself consists of regular text-and-chord lines.
-`{end_or_chorus}` (or `{eot}`) marks the end of the chorus.
+`{end_or_chorus}` (or `{eoc}`) marks the end of the chorus.
 The start and end markers should be on separate lines.
 
 `{start_of_tab}` and `{end_of_tab}` wrabs tabulature, which is currently
