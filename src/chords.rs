@@ -10,6 +10,8 @@ pub enum Instrument {
     Guitar,
     /// Mandolin in g-d-a-e tuning.
     Mandolin,
+    /// Don't render chordboxes.
+    None,
 }
 
 pub struct ChordHolder {
@@ -31,6 +33,12 @@ impl ChordHolder {
             Instrument::Mandolin => ChordHolder {
                 unknown_chord: &UNKNOWN_MANDOLIN_CHORD,
                 known_chords: &KNOWN_MANDOLIN_CHORDS,
+                local: BTreeMap::new(),
+                used: BTreeSet::new(),
+            },
+            Instrument::None => ChordHolder {
+                unknown_chord: &UNKNOWN_NONE_CHORD,
+                known_chords: &KNOWN_NONE_CHORDS,
                 local: BTreeMap::new(),
                 used: BTreeSet::new(),
             },
@@ -70,7 +78,9 @@ impl ChordHolder {
                             })
                         })
                         .unwrap_or_else(|| {
-                            println!("Warning: Unknown chord {name}");
+                            if !self.unknown_chord.is_empty() {
+                                println!("Warning: Unknown chord {name}");
+                            }
                             self.unknown_chord
                         }),
                 )
@@ -340,5 +350,9 @@ lazy_static! {
         chord("G#",    8, 6, 3, 4); // also 1 1 3 4 or 1 1 3 x
     }
     result
+    };
+    static ref UNKNOWN_NONE_CHORD: Vec<i8> = vec![];
+    static ref KNOWN_NONE_CHORDS: BTreeMap<&'static str, Vec<i8>> = {
+        BTreeMap::new()
     };
 }

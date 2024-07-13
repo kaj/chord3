@@ -511,12 +511,15 @@ fn render_chordboxes(
     used_chords: Vec<(&str, &Vec<i8>)>,
     base_size: f32,
 ) -> io::Result<()> {
-    let (box_width, box_height) =
-        if used_chords.first().map_or(true, |(_, v)| v.len() == 7) {
-            (base_size * 3.5, base_size * 31. / 6.)
-        } else {
-            (base_size * 3., base_size * 19. / 3.)
-        };
+    let (box_width, box_height) = match used_chords.first().map(|v| v.1.len()) {
+        Some(7) => (base_size * 3.5, base_size * 31. / 6.),
+        Some(4) => (base_size * 3., base_size * 19. / 3.),
+        Some(0) | None => return Ok(()),
+        x => {
+            println!("Warning: Unkown kind of chord, {x:?}");
+            return Ok(());
+        }
+    };
     let n_chords = used_chords.len() as u32;
     if n_chords > 0 {
         let n_aside = (page.inner_width() / box_width) as u32;
