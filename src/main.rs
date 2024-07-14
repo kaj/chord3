@@ -1,11 +1,13 @@
 mod chords;
+mod key;
 mod pagedim;
 
 use crate::chords::{ChordHolder, Instrument};
+use crate::key::Key;
 use crate::pagedim::PageDim;
 use clap::Parser;
 use pdf_canvas::graphicsstate::Color;
-use pdf_canvas::{BuiltinFont, Canvas, Pdf};
+use pdf_canvas::{BuiltinFont, Canvas, Pdf, TextObject};
 use regex::Regex;
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -180,7 +182,10 @@ enum ChordFileExpression {
     Chorus { lines: Vec<ChordFileExpression> },
     EndOfChorus,
     Tab { lines: Vec<String> },
-    Form { name: String, form: Vec<Vec<String>> },
+    Form {
+        name: String,
+        form: Vec<Vec<String>>,
+    },
     EndOfTab,
     StartColumns { n_columns: u8 },
     ColumnBreak,
@@ -321,15 +326,21 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                             if end.is_match(&line) {
                                 break;
                             }
-                            form.push(line.split('/').map(str::trim).map(Into::into).collect::<Vec<String>>());
+                            form.push(
+                                line.split('/')
+                                    .map(str::trim)
+                                    .map(Into::into)
+                                    .collect::<Vec<String>>(),
+                            );
                         }
-                        dbg!(&arg, &form);
                         Some(ChordFileExpression::Form {
                             name: arg.into(),
                             form,
                         })
                     }
-                    "eof" | "end_of_form" => Some(ChordFileExpression::EndOfTab),
+                    "eof" | "end_of_form" => {
+                        Some(ChordFileExpression::EndOfTab)
+                    }
 
                     "columns" | "col" => {
                         Some(ChordFileExpression::StartColumns {
@@ -466,6 +477,7 @@ fn render_song(
                 }
             }
             write_pageno(c, &page)?;
+            let mut box_w = 0.;
             for token in source.by_ref() {
                 if let ChordFileExpression::StartColumns { n_columns } = token {
                     column_top = y;
@@ -478,6 +490,7 @@ fn render_song(
                         c,
                         &mut chords,
                         base_size,
+                        &mut box_w,
                     )?;
                     if y == std::f32::NEG_INFINITY {
                         render_chordboxes(
@@ -566,11 +579,15 @@ fn render_token(
     c: &mut Canvas<'_>,
     chords: &mut ChordHolder,
     base_size: f32,
+    box_w: &mut f32,
 ) -> io::Result<f32> {
     let times_italic = c.get_font(BuiltinFont::Times_Italic);
     let times = c.get_font(BuiltinFont::Times_Roman);
     let chordfont = c.get_font(BuiltinFont::Helvetica_Oblique);
     let tabfont = c.get_font(BuiltinFont::Courier);
+
+    let chord_size = 0.82 * base_size;
+
     match token {
         ChordFileExpression::Title { s } => {
             c.add_outline(&s);
@@ -605,7 +622,15 @@ fn render_token(
         ChordFileExpression::Chorus { lines } => {
             let mut y2 = y;
             for line in lines {
-                y2 = render_token(line, y2, left + 10.0, c, chords, base_size)?;
+                y2 = render_token(
+                    line,
+                    y2,
+                    left + 10.0,
+                    c,
+                    chords,
+                    base_size,
+                    box_w,
+                )?;
             }
             y2 -= 4.0;
             c.set_line_width(0.5)?;
@@ -630,32 +655,68 @@ fn render_token(
             Ok(y)
         }),
         ChordFileExpression::Form { name, form } => c.text(|t| {
-            // TODO: Needs more if multiple chords in same measure
-            let measure_w = 24.;
             t.gsave()?;
             let mut y = y - base_size;
-            t.set_font(&times_italic, base_size)?;
-            t.pos(dbg!(left), dbg!(y))?;
+            t.set_font(&times_italic, chord_size)?;
+            t.pos(left, y)?;
             t.show(&name)?;
 
             t.set_fill_color(Color::gray(96))?;
-            t.set_font(&chordfont, base_size)?; // TODO: chord_size?
-            let leading = base_size * 1.2;
-            let box_w = measure_w * 4. + 12.;
+            t.set_font(&chordfont, chord_size)?;
+            let leading = chord_size * 1.2;
+            // TODO: Needs more if multiple chords in same measure
+
+            let s_w = chordfont.get_width(chord_size, " ") * 2.;
+            let measure_w = form
+                .iter()
+                .flat_map(|l| l.iter())
+                .map(|c| {
+                    chordfont.get_width(chord_size, c)
+                        + c.split_ascii_whitespace().count() as f32 * s_w
+                })
+                .fold(0_f32, |a, b| a.max(b))
+                + s_w;
+
+            let n_measures = form.iter().map(|l| l.len()).max().unwrap_or(1);
+            *box_w = box_w.max(measure_w * (n_measures as f32 + 1.6666666666));
             t.set_leading(leading)?;
+            let keys = ["G"];
             for line in &form {
                 if let Some((first, rest)) = line.split_first() {
-                    t.show_line(first)?;
+                    t.pos(0., -leading)?;
+                    write_chord(t, first)?;
                     for chord in rest {
                         t.pos(measure_w, 0.)?;
-                        t.show(chord)?;
+                        write_chord(t, chord)?;
                     }
-                    t.pos(- measure_w * rest.len() as f32, 0.)?;
+                    for key in keys {
+                        t.pos(*box_w - measure_w * rest.len() as f32, 0.)?;
+                        let key = Key::new(key)?;
+                        for chord in first.split_ascii_whitespace() {
+                            let chord = &key.from_nashville(&chord);
+                            chords.use_chord(chord);
+                            write_chord(t, chord)?;
+                        }
+                        for chord in rest {
+                            t.pos(measure_w, 0.)?;
+                            for chord in chord.split_ascii_whitespace() {
+                                let chord = &key.from_nashville(&chord);
+                                chords.use_chord(chord);
+                                write_chord(t, chord)?;
+                            }
+                        }
+                    }
+                    t.pos(
+                        measure_w
+                            - (*box_w * keys.len() as f32
+                                + measure_w * line.len() as f32),
+                        0.,
+                    )?;
                 }
                 y -= leading;
             }
             t.grestore()?;
-            Ok(y)
+            Ok(y - leading / 2.)
         }),
         ChordFileExpression::EndOfTab => {
             println!("Warning: Stray end of tab in song!");
@@ -673,7 +734,6 @@ fn render_token(
         ChordFileExpression::NewSong => Ok(std::f32::NEG_INFINITY),
         ChordFileExpression::Line { s } => c.text(|t| {
             let text_size = base_size;
-            let chord_size = 0.75 * text_size;
             let y = y - 1.1
                 * (if s.len() == 1 {
                     text_size
@@ -724,4 +784,20 @@ fn render_token(
             Ok(y)
         }),
     }
+}
+
+fn write_chord(t: &mut TextObject, chord: &str) -> io::Result<()> {
+    if chord.len() > 1 {
+        if let Some(x) = chord.strip_suffix('7') {
+            t.show(x)?;
+            t.set_rise(-1.8)?;
+            // TODO: Also slightly smaller?
+            t.show("7")?;
+            t.set_rise(0.)?;
+            t.show(" ")?;
+            return Ok(());
+        }
+    }
+    t.show(chord)?;
+    t.show("  ")
 }
