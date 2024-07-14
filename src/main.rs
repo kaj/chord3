@@ -180,6 +180,7 @@ enum ChordFileExpression {
     Chorus { lines: Vec<ChordFileExpression> },
     EndOfChorus,
     Tab { lines: Vec<String> },
+    Form { name: String, form: Vec<Vec<String>> },
     EndOfTab,
     StartColumns { n_columns: u8 },
     ColumnBreak,
@@ -312,6 +313,24 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                         Some(ChordFileExpression::Tab { lines })
                     }
                     "eot" | "end_of_tab" => Some(ChordFileExpression::EndOfTab),
+                    "sof" | "start_of_form" => {
+                        let mut form = vec![];
+                        let end =
+                            Regex::new(r"\{e(of|nd_of_form):?\s*").unwrap();
+                        while let Some(line) = self.nextline() {
+                            if end.is_match(&line) {
+                                break;
+                            }
+                            form.push(line.split('/').map(str::trim).map(Into::into).collect::<Vec<String>>());
+                        }
+                        dbg!(&arg, &form);
+                        Some(ChordFileExpression::Form {
+                            name: arg.into(),
+                            form,
+                        })
+                    }
+                    "eof" | "end_of_form" => Some(ChordFileExpression::EndOfTab),
+
                     "columns" | "col" => {
                         Some(ChordFileExpression::StartColumns {
                             n_columns: arg.parse::<u8>().unwrap(),
@@ -608,6 +627,34 @@ fn render_token(
                 y -= size;
                 t.show_line(&line)?;
             }
+            Ok(y)
+        }),
+        ChordFileExpression::Form { name, form } => c.text(|t| {
+            // TODO: Needs more if multiple chords in same measure
+            let measure_w = 24.;
+            t.gsave()?;
+            let mut y = y - base_size;
+            t.set_font(&times_italic, base_size)?;
+            t.pos(dbg!(left), dbg!(y))?;
+            t.show(&name)?;
+
+            t.set_fill_color(Color::gray(96))?;
+            t.set_font(&chordfont, base_size)?; // TODO: chord_size?
+            let leading = base_size * 1.2;
+            let box_w = measure_w * 4. + 12.;
+            t.set_leading(leading)?;
+            for line in &form {
+                if let Some((first, rest)) = line.split_first() {
+                    t.show_line(first)?;
+                    for chord in rest {
+                        t.pos(measure_w, 0.)?;
+                        t.show(chord)?;
+                    }
+                    t.pos(- measure_w * rest.len() as f32, 0.)?;
+                }
+                y -= leading;
+            }
+            t.grestore()?;
             Ok(y)
         }),
         ChordFileExpression::EndOfTab => {
