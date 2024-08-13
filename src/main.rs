@@ -184,6 +184,7 @@ enum ChordFileExpression {
     Tab { lines: Vec<String> },
     Form {
         name: String,
+        keys: Vec<String>,
         form: Vec<Vec<String>>,
     },
     EndOfTab,
@@ -319,6 +320,7 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                     }
                     "eot" | "end_of_tab" => Some(ChordFileExpression::EndOfTab),
                     "sof" | "start_of_form" => {
+                        let mut arg = arg.split("//");
                         let mut form = vec![];
                         let end =
                             Regex::new(r"\{e(of|nd_of_form):?\s*").unwrap();
@@ -334,7 +336,8 @@ impl<R: io::Read> Iterator for ChoproParser<R> {
                             );
                         }
                         Some(ChordFileExpression::Form {
-                            name: arg.into(),
+                            name: arg.next().unwrap_or_default().into(),
+                            keys: arg.map(|s| s.trim().into()).collect(),
                             form,
                         })
                     }
@@ -545,7 +548,7 @@ fn render_chordboxes(
 ) -> io::Result<()> {
     let (box_width, box_height) = match used_chords.first().map(|v| v.1.len()) {
         Some(7) => (base_size * 3.5, base_size * 31. / 6.),
-        Some(4) => (base_size * 3., base_size * 19. / 3.),
+        Some(5) => (base_size * 3., base_size * 19. / 3.),
         Some(0) | None => return Ok(()),
         x => {
             println!("Warning: Unkown kind of chord, {x:?}");
@@ -654,7 +657,7 @@ fn render_token(
             }
             Ok(y)
         }),
-        ChordFileExpression::Form { name, form } => c.text(|t| {
+        ChordFileExpression::Form { name, keys, form } => c.text(|t| {
             t.gsave()?;
             let mut y = y - base_size;
             t.set_font(&times_italic, chord_size)?;
@@ -666,30 +669,39 @@ fn render_token(
             let leading = chord_size * 1.2;
             // TODO: Needs more if multiple chords in same measure
 
-            let s_w = chordfont.get_width(chord_size, " ") * 2.;
+            let s_w = chordfont.get_width(chord_size, " ");
+            let sl_w = chordfont.get_width(chord_size, "/ ");
+            let key = keys.first().map(|k| Key::new(k))
+                .unwrap_or(Key::new("Bb"))?;
             let measure_w = form
                 .iter()
                 .flat_map(|l| l.iter())
-                .map(|c| {
-                    chordfont.get_width(chord_size, c)
-                        + c.split_ascii_whitespace().count() as f32 * s_w
+                .map(|m| {
+                    m.split_ascii_whitespace()
+                        .map(|c| {
+                            let chord = &key.from_nashville(&c);
+                            chordfont.get_width(chord_size, chord)
+                                + s_w
+                        })
+                        .sum()
                 })
                 .fold(0_f32, |a, b| a.max(b))
-                + s_w;
+                + sl_w;
 
             let n_measures = form.iter().map(|l| l.len()).max().unwrap_or(1);
             *box_w = box_w.max(measure_w * (n_measures as f32 + 1.6666666666));
             t.set_leading(leading)?;
-            let keys = ["G"];
             for line in &form {
                 if let Some((first, rest)) = line.split_first() {
                     t.pos(0., -leading)?;
                     write_chord(t, first)?;
                     for chord in rest {
-                        t.pos(measure_w, 0.)?;
+                        t.pos(measure_w - sl_w, 0.)?;
+                        t.show("| ")?;
+                        t.pos(sl_w, 0.)?;
                         write_chord(t, chord)?;
                     }
-                    for key in keys {
+                    for key in &keys {
                         t.pos(*box_w - measure_w * rest.len() as f32, 0.)?;
                         let key = Key::new(key)?;
                         for chord in first.split_ascii_whitespace() {
@@ -698,7 +710,9 @@ fn render_token(
                             write_chord(t, chord)?;
                         }
                         for chord in rest {
-                            t.pos(measure_w, 0.)?;
+                            t.pos(measure_w - sl_w, 0.)?;
+                            t.show("| ")?;
+                            t.pos(sl_w, 0.)?;
                             for chord in chord.split_ascii_whitespace() {
                                 let chord = &key.from_nashville(&chord);
                                 chords.use_chord(chord);
@@ -799,5 +813,5 @@ fn write_chord(t: &mut TextObject, chord: &str) -> io::Result<()> {
         }
     }
     t.show(chord)?;
-    t.show("  ")
+    t.show(" ")
 }
