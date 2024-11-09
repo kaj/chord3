@@ -27,6 +27,9 @@ impl From<PageArgs> for PageDim {
     }
 }
 
+const INNER: f32 = 70.;
+const OUTER: f32 = 20.;
+
 impl PageDim {
     pub fn next(&self) -> PageDim {
         PageDim {
@@ -42,7 +45,7 @@ impl PageDim {
     }
 
     pub fn inner_width(&self) -> f32 {
-        self.width - 95.0
+        self.width - (INNER + OUTER)
     }
     pub fn width(&self) -> f32 {
         self.width
@@ -59,16 +62,16 @@ impl PageDim {
     }
     pub fn left(&self) -> f32 {
         if self.is_verso() {
-            20.0
+            OUTER
         } else {
-            80.0
+            INNER
         }
     }
     pub fn right(&self) -> f32 {
         if self.is_verso() {
-            self.width - 75.0
+            self.width - INNER
         } else {
-            self.width - 15.0
+            self.width - OUTER
         }
     }
     pub fn top(&self) -> f32 {
