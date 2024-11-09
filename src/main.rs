@@ -182,11 +182,7 @@ enum ChordFileExpression {
     Chorus { lines: Vec<ChordFileExpression> },
     EndOfChorus,
     Tab { lines: Vec<String> },
-    Form {
-        name: String,
-        keys: Vec<String>,
-        form: Vec<Vec<String>>,
-    },
+    Form { name: String, keys: Vec<String>, form: Vec<Vec<String>> },
     EndOfTab,
     StartColumns { n_columns: u8 },
     ColumnBreak,
@@ -671,7 +667,9 @@ fn render_token(
 
             let s_w = chordfont.get_width(chord_size, " ");
             let sl_w = chordfont.get_width(chord_size, "/ ");
-            let key = keys.first().map(|k| Key::new(k))
+            let key = keys
+                .first()
+                .map(|k| Key::new(k))
                 .unwrap_or(Key::new("Bb"))?;
             let measure_w = form
                 .iter()
@@ -680,8 +678,7 @@ fn render_token(
                     m.split_ascii_whitespace()
                         .map(|c| {
                             let chord = &key.from_nashville(&c);
-                            chordfont.get_width(chord_size, chord)
-                                + s_w
+                            chordfont.get_width(chord_size, chord) + s_w
                         })
                         .sum()
                 })
