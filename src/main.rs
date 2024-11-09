@@ -601,8 +601,8 @@ fn render_token(
             Ok(y)
         }
         ChordFileExpression::SubTitle { s } => c.text(|t| {
-            let y = y - 16.0;
-            t.set_font(&times_italic, 14.0)?;
+            let y = y - 1.333_333_3 * base_size;
+            t.set_font(&times_italic, 1.166_666_7 * base_size)?;
             t.pos(left, y)?;
             t.show(&s)?;
             Ok(y)
@@ -686,7 +686,7 @@ fn render_token(
                 + sl_w;
 
             let n_measures = form.iter().map(|l| l.len()).max().unwrap_or(1);
-            *box_w = box_w.max(measure_w * (n_measures as f32 + 1.6666666666));
+            *box_w = box_w.max(measure_w * (n_measures as f32 + 1.666_666_7));
             t.set_leading(leading)?;
             for line in &form {
                 if let Some((first, rest)) = line.split_first() {
