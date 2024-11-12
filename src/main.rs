@@ -7,7 +7,7 @@ use crate::key::Key;
 use crate::pagedim::PageDim;
 use clap::Parser;
 use pdf_canvas::graphicsstate::Color;
-use pdf_canvas::{BuiltinFont, Canvas, Pdf, TextObject};
+use pdf_canvas::{BuiltinFont, Canvas, FontRef, Pdf, TextObject};
 use regex::Regex;
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -582,7 +582,7 @@ fn render_token(
 ) -> io::Result<f32> {
     let times_italic = c.get_font(BuiltinFont::Times_Italic);
     let times = c.get_font(BuiltinFont::Times_Roman);
-    let chordfont = c.get_font(BuiltinFont::Helvetica_Oblique);
+    let chordfont = c.get_font(BuiltinFont::Helvetica);
     let tabfont = c.get_font(BuiltinFont::Courier);
 
     let chord_size = 0.82 * base_size;
@@ -659,14 +659,14 @@ fn render_token(
             t.set_font(&times_italic, chord_size)?;
             t.pos(left, y)?;
             t.show(&name)?;
-
-            t.set_fill_color(Color::gray(96))?;
+            let chord_size = 1.2 * chord_size;
+            t.set_fill_color(Color::gray(0))?;
             t.set_font(&chordfont, chord_size)?;
             let leading = chord_size * 1.2;
             // TODO: Needs more if multiple chords in same measure
 
             let s_w = chordfont.get_width(chord_size, " ");
-            let sl_w = chordfont.get_width(chord_size, "/ ");
+            let sl_w = chordfont.get_width(chord_size, "| ");
             let key = keys
                 .first()
                 .map(|k| Key::new(k))
@@ -683,20 +683,26 @@ fn render_token(
                         .sum()
                 })
                 .fold(0_f32, |a, b| a.max(b))
-                + sl_w;
-
+                + sl_w
+                - s_w;
+            let measure_w = f32::max(measure_w, 5. * s_w + sl_w);
             let n_measures = form.iter().map(|l| l.len()).max().unwrap_or(1);
-            *box_w = box_w.max(measure_w * (n_measures as f32 + 1.666_666_7));
+            *box_w = box_w.max(
+                measure_w * (n_measures as f32)
+                    + f32::max(measure_w * 0.5, sl_w * 2.),
+            );
             t.set_leading(leading)?;
             for line in &form {
                 if let Some((first, rest)) = line.split_first() {
                     t.pos(0., -leading)?;
-                    write_chord(t, first)?;
+                    write_chord(t, first, &chordfont, chord_size)?;
                     for chord in rest {
                         t.pos(measure_w - sl_w, 0.)?;
+                        t.set_fill_color(Color::gray(128))?;
                         t.show("| ")?;
+                        t.set_fill_color(Color::gray(0))?;
                         t.pos(sl_w, 0.)?;
-                        write_chord(t, chord)?;
+                        write_chord(t, chord, &chordfont, chord_size)?;
                     }
                     for key in &keys {
                         t.pos(*box_w - measure_w * rest.len() as f32, 0.)?;
@@ -704,16 +710,18 @@ fn render_token(
                         for chord in first.split_ascii_whitespace() {
                             let chord = &key.from_nashville(&chord);
                             chords.use_chord(chord);
-                            write_chord(t, chord)?;
+                            write_chord(t, chord, &chordfont, chord_size)?;
                         }
                         for chord in rest {
                             t.pos(measure_w - sl_w, 0.)?;
+                            t.set_fill_color(Color::gray(128))?;
                             t.show("| ")?;
+                            t.set_fill_color(Color::gray(0))?;
                             t.pos(sl_w, 0.)?;
                             for chord in chord.split_ascii_whitespace() {
                                 let chord = &key.from_nashville(&chord);
                                 chords.use_chord(chord);
-                                write_chord(t, chord)?;
+                                write_chord(t, chord, &chordfont, chord_size)?;
                             }
                         }
                     }
@@ -797,18 +805,25 @@ fn render_token(
     }
 }
 
-fn write_chord(t: &mut TextObject, chord: &str) -> io::Result<()> {
-    if chord.len() > 1 {
+fn write_chord(
+    t: &mut TextObject,
+    chord: &str,
+    chordfont: &FontRef,
+    chord_size: f32,
+) -> io::Result<()> {
+    // TODO: Replace b -> ♭ and # -> ♯
+    if chord.len() > 1 && !chord.starts_with('7') && !chord.starts_with("b7") {
         if let Some(x) = chord.strip_suffix('7') {
             t.show(x)?;
             t.set_rise(-1.8)?;
-            // TODO: Also slightly smaller?
-            t.show("7")?;
+            t.set_font(&chordfont, chord_size * 3. / 4.)?;
+            t.show_adjusted(&[("", -100), ("7", 0)])?;
             t.set_rise(0.)?;
+            t.set_font(&chordfont, chord_size)?;
             t.show(" ")?;
             return Ok(());
         }
     }
-    t.show(chord)?;
+    t.show(&chord)?;
     t.show(" ")
 }
